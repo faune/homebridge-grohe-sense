@@ -1,15 +1,35 @@
 {
-  "pluginAlias": "ExampleHomebridgePlugin",
+  "pluginAlias": "Ondus",
   "pluginType": "platform",
   "singular": true,
+  "headerDisplay": "Ondus plugin for Grohe Sense Guard water control and Sense leakage detectors",
+  "footerDisplay": "For a detailed description, see the [wiki](https://github.com/faune/homebridge-plugin-ondus/wiki/Configuration)",
   "schema": {
     "type": "object",
     "properties": {
       "name": {
-        "title": "Name",
+        "description": "Plugin name as displayed in the HomeBridge log",
         "type": "string",
         "required": true,
-        "default": "Example Dynamic Platform"
+        "default": "Ondus"
+      },
+      "refresh_token": {
+        "description":"Grohe Ondus API refresh token",
+        "type" : "string",
+        "required": true,
+        "default": "<Paste refresh token here>"
+      },
+      "username" : {
+        "description":"Optional username for Grohe Ondus for acquiring refresh token automatically",
+        "type": "string",
+        "required": false,
+        "default": ""
+      },
+      "password" : {
+        "description":"Optional password for Grohe Ondus for acquiring refresh token automatically",
+        "type": "string",
+        "required": false,
+        "default": ""
       }
     }
   }
