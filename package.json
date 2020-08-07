@@ -27,7 +27,7 @@
     "homebridge-plugin"
   ],
   "dependencies": {
-    "homebridge-config-ui-x": "^4.24.0"
+    "homebridge-lib": "^4.7.14"
   },
   "devDependencies": {
     "@types/node": "^14.0.14",
