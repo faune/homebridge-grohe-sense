@@ -6,7 +6,32 @@ import { OndusSenseAccessory } from './ondusSense';
 // Ondus HTTP library
 import { OndusSession } from './ondusSession';
 
+/* TODO: When implementing notification support
 
+// The protocol returns notification information as a {category: type}
+NOTIFICATION_TYPES = { 
+  {10:60} : 'Firmware update available',
+  (10,460) : 'Firmware update available',
+  (20,11) : 'Battery low',
+  (20,12) : 'Battery empty',
+  (20,20) : 'Below temperature threshold',
+  (20,21) : 'Above temperature threshold',
+  (20,30) : 'Below humidity threshold',
+  (20,31) : 'Above humidity threshold',
+  (20,40) : 'Frost warning',
+  (20,80) : 'Lost wifi',
+  (20,320) : 'Unusual water consumption (water shut off)',
+  (20,321) : 'Unusual water consumption (water not shut off)',
+  (20,330) : 'Micro leakage',
+  (20,340) : 'Frost warning',
+  (20,380) : 'Lost wifi',
+  (30,0) : 'Flooding',
+  (30,310) : 'Pipe break',
+  (30,400) : 'Maximum volume reached',
+  (30,430) : 'Sense detected water (water shut off)',
+  (30,431) : 'Sense detected water (water not shut off)',
+  }
+*/
 
 /**
  * HomebridgePlatform
@@ -124,22 +149,6 @@ export class OndusPlatform implements DynamicPlatformPlugin {
         throw err;
       });
 
-
-    
-
-    
-
-    /*
-    (await this.ondusSession.getLocations()).forEach(async (location) => {
-      this.log.debug('Discovered location: ', location);
-      (await this.ondusSession.getRooms(location)).forEach(async (room) => {
-        this.log.debug('Discovered room: ', room);
-        (await this.ondusSession.getAppliances(room)).forEach(async (appliance) => {
-          this.log.debug('Discovered appliance: ', appliance);
-        });
-      });
-    });
-*/
 
     const senseDevice = {
       name: 'Sense',
