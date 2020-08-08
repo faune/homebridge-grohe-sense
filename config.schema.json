@@ -16,7 +16,7 @@
       "refresh_token": {
         "description":"Grohe Ondus API refresh token",
         "type" : "string",
-        "required": true,
+        "required": false,
         "default": "<Paste refresh token here>"
       },
       "username" : {

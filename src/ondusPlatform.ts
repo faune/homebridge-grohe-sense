@@ -1,7 +1,14 @@
 import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge';
+//import { homebridgeLib } from 'homebridge-lib';
 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { OndusSenseAccessory } from './ondusSense';
+
+
+// Axios HTTP library
+import { OndusSession } from './ondusSession';
+
+
 
 /**
  * HomebridgePlatform
@@ -15,11 +22,29 @@ export class OndusPlatform implements DynamicPlatformPlugin {
   // this is used to track restored cached accessories
   public readonly accessories: PlatformAccessory[] = [];
 
+  private ondusSession: OndusSession;
+
   constructor(
     public readonly log: Logger,
     public readonly config: PlatformConfig,
     public readonly api: API,
   ) {
+    this.log.debug('Creating Ondus service session');
+
+    // Validate config
+    if (!this.config['refresh_token'] && (!this.config['username'] || !this.config['password'])) {
+      this.log.error('Must configure either refresh_token, or username and password, in "%s" section of config.json', this.config.name);
+      //TODO: Additional error handling?
+    } 
+    
+    
+
+    // Instantiate Ondus session for handling web comms
+    this.ondusSession = new OndusSession(this.log, 
+      this.config['refresh_token'],
+      this.config['username'],
+      this.config['password']);
+
     this.log.debug('Finished initializing platform:', this.config.name);
 
     // When this event is fired it means Homebridge has restored all cached accessories from disk.
@@ -49,10 +74,28 @@ export class OndusPlatform implements DynamicPlatformPlugin {
    * Accessories must only be registered once, previously created accessories
    * must not be registered again to prevent "duplicate UUID" errors.
    */
-  discoverDevices() {
+  async discoverDevices() {
 
     this.log.debug('Fetching Ondus devices');
     //TODO: Query Ondus web for devices and add dynamically
+
+    await this.ondusSession.login()
+      .then(value => {
+        this.log.debug('Login successfull: ', value);   
+      });
+    this.ondusSession.getLocations();
+
+    /*
+    (await this.ondusSession.getLocations()).forEach(async (location) => {
+      this.log.debug('Discovered location: ', location);
+      (await this.ondusSession.getRooms(location)).forEach(async (room) => {
+        this.log.debug('Discovered room: ', room);
+        (await this.ondusSession.getAppliances(room)).forEach(async (appliance) => {
+          this.log.debug('Discovered appliance: ', appliance);
+        });
+      });
+    });
+*/
 
     const senseDevice = {
       name: 'Sense',

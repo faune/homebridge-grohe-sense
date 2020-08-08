@@ -1,6 +1,6 @@
 import { Service, PlatformAccessory, CharacteristicValue, CharacteristicSetCallback, CharacteristicGetCallback } from 'homebridge';
 
-import { OndusPlatform } from './ondus';
+import { OndusPlatform } from './ondusPlatform';
 
 /**
  * Platform Accessory

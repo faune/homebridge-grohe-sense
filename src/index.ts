@@ -1,7 +1,7 @@
 import { API } from 'homebridge';
 
 import { PLATFORM_NAME } from './settings';
-import { OndusPlatform } from './ondus'; 
+import { OndusPlatform } from './ondusPlatform'; 
 
 /**
  * This method registers the platform with Homebridge
