@@ -82,38 +82,52 @@ export class OndusSession {
     });
   }
   
-
-  public getLocations() {
-
-    this.log.debug('Retrieving locations');
-    const locations = [];
-
-    superagent
-      .get(this.BASE_URL + '/locations')
-      .set('Content-Type', 'application/json')
-      .set('Authorization', 'Bearer ' + this.accessToken)
-      .set('accept', 'json')
-      .end((err, res) => {
-        if (err) {
-          this.log.error('Unexpected server response: ', err);
-        } else {
-          this.log.debug(res.text);   
-        }   
-      });
-
-    return locations;
+  /**
+   * Private helper method to re-use Promise together with superagent query.
+   * This function must only be called after a successful login() has been
+   * performed, as it depends on a valid access token.
+   * 
+   * @param url URL address to perform a GET against
+   */
+  private async getURL(url: string) {
+    if (!this.accessToken) {
+      this.log.error('Cannot call getURL() before an access token has been acquired');
+    }
+    this.log.debug('Fetching: ', url);
+    
+    return new Promise<superagent.Response>((resolve, reject) => {
+      superagent
+        .get(url)
+        .set('Content-Type', 'application/json')
+        .set('Authorization', 'Bearer ' + this.accessToken)
+        .set('accept', 'json')
+        .end((err, res) => {
+          if (!err) {
+            resolve(res);
+          } else {
+            this.log.error('Unexpected server response: ', err);
+            reject(err);
+          }
+        });
+    });
   }
 
-  public async getRooms(location: string) {
-    this.log.debug('Retrieving rooms for location, ', location);
-    const rooms = [];
-    return rooms;
+  /**
+   * Retrieve all registered locations as a json object
+   */
+  public async getLocations() {
+    this.log.debug('Retrieving locations');    
+    return this.getURL(`${this.BASE_URL}/locations`);
+  }
+
+  public async getRooms(locationID: number) {
+    this.log.debug(`Retrieving rooms for locationID=${locationID}`);
+    return this.getURL(`${this.BASE_URL}/locations/${locationID}/rooms`);
   } 
 
-  public async getAppliances(room: string) {
-    this.log.debug('Retrieving appliances for room, ', room);
-    const appliances = [];
-    return appliances;
+  public async getAppliances(locationID: number, roomID: number) {
+    this.log.debug(`Retrieving appliances for roomID=${roomID}`);
+    return this.getURL(`${this.BASE_URL}/locations/${locationID}/rooms/${roomID}/appliances`);
   }
 
 }

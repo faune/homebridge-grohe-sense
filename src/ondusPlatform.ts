@@ -81,9 +81,55 @@ export class OndusPlatform implements DynamicPlatformPlugin {
 
     await this.ondusSession.login()
       .then(value => {
-        this.log.debug('Login successfull: ', value);   
+        this.log.debug('Login successfull');   
+      })
+      .catch((err: any) => {
+        throw err;
       });
-    this.ondusSession.getLocations();
+  
+    // Retrieve all locations
+    await this.ondusSession.getLocations()
+      .then(locations => {
+        this.log.debug('Iterating over locations: ', locations.body);
+        locations.body.forEach(async location => {
+          
+          // Retrieve registered rooms for a location
+          this.log.debug(`Processing locationID=${location}`);
+          await this.ondusSession.getRooms(location.id)
+            .then(rooms => {
+              this.log.debug('Iterating over rooms: ', rooms.body);
+              rooms.body.forEach(async room => {
+
+                // Retrieve registered appliances for a room
+                this.log.debug(`Processing roomID=${room.id}`);
+                await this.ondusSession.getAppliances(location.id, room.id)
+                  .then(appliances => {
+                    this.log.debug('Iterating over appliances: ', appliances.body);
+                    appliances.body.forEach(appliance => {
+                      this.log.debug(`Found applianceID=${appliance.appliance_id} name=${appliance.name}`);
+                    });
+                  })
+                  // Error handler for appliances
+                  .catch(err => {
+                    throw err;
+                  });
+              });
+            })
+            // Error handler for rooms
+            .catch(err => {
+              throw err;
+            });
+        });
+      })
+      // Error handler for locations
+      .catch(err => {
+        throw err;
+      });
+
+
+    
+
+    
 
     /*
     (await this.ondusSession.getLocations()).forEach(async (location) => {
