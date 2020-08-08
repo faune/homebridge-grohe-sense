@@ -111,7 +111,7 @@ export class OndusSession {
   }
 
   /**
-   * Retrieve all registered locations for this user as a JSON object
+   * Retrieve all registered locations for the acquired access token as a JSON object
    */
   public async getLocations() {
     this.log.debug('getLocations(): Retrieving locations');    
@@ -151,5 +151,27 @@ export class OndusSession {
     return this.getURL(`${this.BASE_URL}/locations/${locationID}/rooms/${roomID}/appliances/${applianceID}`);
   }
 
+  /**
+   * Retrieve appliance notifications as a JSON object
+   * 
+   * @param locationID Number representing the locationID for appliance
+   * @param roomID Number representing the roomID for appliance
+   * @param applianceID Number representing the applianceID
+   */
+  public async getApplianceNotifications(locationID: number, roomID: number, applianceID: number) {
+    this.log.debug(`getApplianceInfo(): Retrieving info about locationID=${locationID} roomID=${roomID} applianceID=${applianceID}`);
+    return this.getURL(`${this.BASE_URL}/locations/${locationID}/rooms/${roomID}/appliances/${applianceID}/notifications`);
+  }
 
+  /**
+   * Retrieve info about a specific appliance as a JSON object
+   * 
+   * @param locationID Number representing the locationID for appliance
+   * @param roomID Number representing the roomID for appliance
+   * @param applianceID Number representing the applianceID
+   */
+  public async getApplianceMeasurements(locationID: number, roomID: number, applianceID: number, fromDate: Date) {
+    this.log.debug(`getApplianceInfo(): Retrieving info about locationID=${locationID} roomID=${roomID} applianceID=${applianceID}`);
+    return this.getURL(`${this.BASE_URL}/locations/${locationID}/rooms/${roomID}/appliances/${applianceID}/data?from=${fromDate}`);
+  }
 }
