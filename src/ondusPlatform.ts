@@ -78,10 +78,10 @@ export class OndusPlatform implements DynamicPlatformPlugin {
     //TODO: Query Ondus web for devices and add dynamically
 
     await this.ondusSession.login()
-      .then(value => {
-        this.log.debug('Login successfull');   
+      .then(response => {
+        this.log.debug(`Function login() successfull - HTTP_STATUS_CODE=${response.status}`);   
       })
-      .catch((err: any) => {
+      .catch(err => {
         throw err;
       });
   
@@ -92,14 +92,14 @@ export class OndusPlatform implements DynamicPlatformPlugin {
         locations.body.forEach(async location => {
           
           // Retrieve registered rooms for a location
-          this.log.debug(`Processing locationID=${location}`);
+          this.log.debug(`Processing locationID=${location.id} (${location.name})`);
           await this.ondusSession.getRooms(location.id)
             .then(rooms => {
               //this.log.debug('Iterating over rooms: ', rooms.body);
               rooms.body.forEach(async room => {
 
                 // Retrieve registered appliances for a room
-                this.log.debug(`Processing roomID=${room.id}`);
+                this.log.debug(`Processing roomID=${room.id} (${room.name})`);
                 await this.ondusSession.getAppliances(location.id, room.id)
                   .then(appliances => {
                     //this.log.debug('Iterating over appliances: ', appliances.body);
