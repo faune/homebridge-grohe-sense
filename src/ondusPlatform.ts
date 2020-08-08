@@ -1,11 +1,9 @@
 import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge';
-//import { homebridgeLib } from 'homebridge-lib';
 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { OndusSenseAccessory } from './ondusSense';
 
-
-// Axios HTTP library
+// Ondus HTTP library
 import { OndusSession } from './ondusSession';
 
 
@@ -90,21 +88,21 @@ export class OndusPlatform implements DynamicPlatformPlugin {
     // Retrieve all locations
     await this.ondusSession.getLocations()
       .then(locations => {
-        this.log.debug('Iterating over locations: ', locations.body);
+        //this.log.debug('Iterating over locations: ', locations.body);
         locations.body.forEach(async location => {
           
           // Retrieve registered rooms for a location
           this.log.debug(`Processing locationID=${location}`);
           await this.ondusSession.getRooms(location.id)
             .then(rooms => {
-              this.log.debug('Iterating over rooms: ', rooms.body);
+              //this.log.debug('Iterating over rooms: ', rooms.body);
               rooms.body.forEach(async room => {
 
                 // Retrieve registered appliances for a room
                 this.log.debug(`Processing roomID=${room.id}`);
                 await this.ondusSession.getAppliances(location.id, room.id)
                   .then(appliances => {
-                    this.log.debug('Iterating over appliances: ', appliances.body);
+                    //this.log.debug('Iterating over appliances: ', appliances.body);
                     appliances.body.forEach(appliance => {
                       this.log.debug(`Found applianceID=${appliance.appliance_id} name=${appliance.name}`);
                     });
