@@ -1,5 +1,4 @@
 import { Logger } from 'homebridge';
-import { HttpClient } from 'homebridge-lib';
 import superagent from 'superagent';
 
 export class OndusSession {
