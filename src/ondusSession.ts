@@ -4,7 +4,6 @@ import superagent from 'superagent';
 export class OndusSession {
 
   log: Logger;
-  httpClient: HttpClient;
   refreshToken = '';
   accessToken = '';
   username = '';
