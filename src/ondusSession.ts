@@ -89,9 +89,9 @@ export class OndusSession {
    */
   private async getURL(url: string) {
     if (!this.accessToken) {
-      this.log.error('Cannot call getURL() before an access token has been acquired');
+      this.log.error('getURL(): Cannot call getURL() before an access token has been acquired');
     }
-    this.log.debug('Fetching: ', url);
+    this.log.debug('getURL(): Fetching: ', url);
     
     return new Promise<superagent.Response>((resolve, reject) => {
       superagent
@@ -103,7 +103,7 @@ export class OndusSession {
           if (!err) {
             resolve(res);
           } else {
-            this.log.error('Unexpected server response: ', err);
+            this.log.error('getURL(): Unexpected server response: ', err);
             reject(err);
           }
         });
@@ -111,21 +111,45 @@ export class OndusSession {
   }
 
   /**
-   * Retrieve all registered locations as a json object
+   * Retrieve all registered locations for this user as a JSON object
    */
   public async getLocations() {
-    this.log.debug('Retrieving locations');    
+    this.log.debug('getLocations(): Retrieving locations');    
     return this.getURL(`${this.BASE_URL}/locations`);
   }
 
+  /**
+   * Retrieve all registered rooms for a locationID as a JSON object
+   * 
+   * @param locationID Number representing the locationID for querying rooms
+   */
   public async getRooms(locationID: number) {
-    this.log.debug(`Retrieving rooms for locationID=${locationID}`);
+    this.log.debug(`getRooms(): Retrieving rooms for locationID=${locationID}`);
     return this.getURL(`${this.BASE_URL}/locations/${locationID}/rooms`);
   } 
 
+  /**
+   * Retrieve all registered appliances for a locationID and roomID as a JSON object
+   * 
+   * @param locationID Number representing the locationID for appliances
+   * @param roomID Number representing the roomID for appliances
+   */
   public async getAppliances(locationID: number, roomID: number) {
-    this.log.debug(`Retrieving appliances for roomID=${roomID}`);
+    this.log.debug(`getAppliances(): Retrieving appliances for roomID=${roomID}`);
     return this.getURL(`${this.BASE_URL}/locations/${locationID}/rooms/${roomID}/appliances`);
   }
+
+  /**
+   * Retrieve info about a specific appliance as a JSON object
+   * 
+   * @param locationID Number representing the locationID for appliance
+   * @param roomID Number representing the roomID for appliance
+   * @param applianceID Number representing the applianceID
+   */
+  public async getApplianceInfo(locationID: number, roomID: number, applianceID: number) {
+    this.log.debug(`getApplianceInfo(): Retrieving info about locationID=${locationID} roomID=${roomID} applianceID=${applianceID}`);
+    return this.getURL(`${this.BASE_URL}/locations/${locationID}/rooms/${roomID}/appliances/${applianceID}`);
+  }
+
 
 }
