@@ -30,6 +30,12 @@
         "type": "string",
         "required": false,
         "default": ""
+      },
+      "refresh_interval" : {
+        "description":"How often (in seconds) to query the Ondus API for new data",
+        "type": "number",
+        "required": true,
+        "default" : 3600
       }
     }
   }

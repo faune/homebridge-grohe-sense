@@ -1,7 +1,10 @@
 import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge';
 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
-import { OndusSenseAccessory } from './ondusSense';
+import { OndusSense } from './ondusSense';
+import { OndusSensePlus } from './ondusSensePlus';
+import { OndusSenseGuard } from './ondusSenseGuard';
+
 
 // Ondus HTTP library
 import { OndusSession } from './ondusSession';
@@ -45,7 +48,7 @@ export class OndusPlatform implements DynamicPlatformPlugin {
   // this is used to track restored cached accessories
   public readonly accessories: PlatformAccessory[] = [];
 
-  private ondusSession: OndusSession;
+  public ondusSession: OndusSession;
 
   constructor(
     public readonly log: Logger,
@@ -130,6 +133,7 @@ export class OndusPlatform implements DynamicPlatformPlugin {
                     //this.log.debug('Iterating over appliances: ', appliances.body);
                     appliances.body.forEach(appliance => {
                       this.log.debug(`Found applianceID=${appliance.appliance_id} name=${appliance.name}`);
+                      this.registerOndusAppliance(location.id, room.id, appliance);
                     });
                   })
                   // Error handler for appliances
@@ -148,116 +152,50 @@ export class OndusPlatform implements DynamicPlatformPlugin {
       .catch(err => {
         throw err;
       });
+  }
 
-
-    const senseDevice = {
-      name: 'Sense',
-      serial_number: '50FA', 
-    };
-
-
-    // generate a unique id for the accessory this should be generated from
-    // something globally unique, but constant, for example, the device serial
-    // number or MAC address
-    const uuid = this.api.hap.uuid.generate(senseDevice.serial_number);
-
+  
+  private registerOndusAppliance(locationID, roomID, applianceInfo) {
+    
     // see if an accessory with the same uuid has already been registered and restored from
     // the cached devices we stored in the `configureAccessory` method above
-    const existingAccessory = this.accessories.find(accessory => accessory.UUID === uuid);
+    let accessory = this.accessories.find(accessory => accessory.UUID === applianceInfo.appliance_id);
 
-    if (existingAccessory) {
-      // the accessory already exists
-      this.log.info('Restoring existing accessory from cache:', existingAccessory.displayName);
-
-      // if you need to update the accessory.context then you should run `api.updatePlatformAccessories`. eg.:
-      // existingAccessory.context.device = device;
-      // this.api.updatePlatformAccessories([existingAccessory]);
-
-      // create the accessory handler for the restored accessory
-      // this is imported from `platformAccessory.ts`
-      new OndusSenseAccessory(this, existingAccessory);
-
-    } else {
-
+    if (!accessory) {
       // the accessory does not yet exist, so we need to create it
-      this.log.info('Adding new Ondus Sense leakage detector:', senseDevice.name);
+      this.log.info(`Adding new Ondus appliance: ${applianceInfo.name}`);
 
       // create a new accessory
-      const accessory = new this.api.platformAccessory(senseDevice.name, uuid);
-
-      // store a copy of the device object in the `accessory.context`
-      // the `context` property can be used to store any data about the accessory you may need
-      accessory.context.device = senseDevice;
-
-      // create the accessory handler for the newly create accessory
-      // this is imported from `platformAccessory.ts`
-      new OndusSenseAccessory(this, accessory);
+      accessory = new this.api.platformAccessory(applianceInfo.name, applianceInfo.appliance_id);
 
       // link the accessory to your platform
       this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
     }
+    
+    // store a copy of the device object in the `accessory.context`
+    // the `context` property can be used to store any data about the accessory you may need
+    accessory.context.device = applianceInfo; 
 
-    /*
-    // EXAMPLE ONLY
-    // A real plugin you would discover accessories from the local network, cloud services
-    // or a user-defined array in the platform config.
-    const exampleDevices = [
-        {
-        exampleUniqueId: 'ABCD',
-        exampleDisplayName: 'Bedroom',
-      },
-      {
-        exampleUniqueId: 'EFGH',
-        exampleDisplayName: 'Kitchen',
-      },
-    ];
 
-    // loop over the discovered devices and register each one if it has not already been registered
-    for (const device of exampleDevices) {
+    // create the accessory handler for the accessory
+    switch(applianceInfo.type) {
+      case OndusSense.ONDUS_TYPE:
+        this.log.info(`Opening device handler "${OndusSense.ONDUS_NAME}" for "${applianceInfo.name}"`);
+        new OndusSense(this, accessory, locationID, roomID);
+        break;
+      case OndusSensePlus.ONDUS_TYPE:
+        this.log.info(`Opening device handler "${OndusSensePlus.ONDUS_NAME}" for "${applianceInfo.name}"`);
+        new OndusSensePlus(this, accessory, locationID, roomID);
+        break;
+      case OndusSenseGuard.ONDUS_TYPE:
+        this.log.info(`Opening device handler "${OndusSenseGuard.ONDUS_NAME}" for "${applianceInfo.name}"`);
+        new OndusSenseGuard(this, accessory, locationID, roomID);
+        break;
+      default:
+        this.log.warn(`Unsupported Ondus appliance type encountered: ${applianceInfo.type} - ignoring`);
+        return;
+    }
 
-      // generate a unique id for the accessory this should be generated from
-      // something globally unique, but constant, for example, the device serial
-      // number or MAC address
-      const uuid = this.api.hap.uuid.generate(device.exampleUniqueId);
-
-      // see if an accessory with the same uuid has already been registered and restored from
-      // the cached devices we stored in the `configureAccessory` method above
-      const existingAccessory = this.accessories.find(accessory => accessory.UUID === uuid);
-
-      if (existingAccessory) {
-        // the accessory already exists
-        this.log.info('Restoring existing accessory from cache:', existingAccessory.displayName);
-
-        // if you need to update the accessory.context then you should run `api.updatePlatformAccessories`. eg.:
-        // existingAccessory.context.device = device;
-        // this.api.updatePlatformAccessories([existingAccessory]);
-
-        // create the accessory handler for the restored accessory
-        // this is imported from `platformAccessory.ts`
-        new ExamplePlatformAccessory(this, existingAccessory);
-
-      } else {
-        // the accessory does not yet exist, so we need to create it
-        this.log.info('Adding new accessory:', device.exampleDisplayName);
-
-        // create a new accessory
-        const accessory = new this.api.platformAccessory(device.exampleDisplayName, uuid);
-
-        // store a copy of the device object in the `accessory.context`
-        // the `context` property can be used to store any data about the accessory you may need
-        accessory.context.device = device;
-
-        // create the accessory handler for the newly create accessory
-        // this is imported from `platformAccessory.ts`
-        new ExamplePlatformAccessory(this, accessory);
-
-        // link the accessory to your platform
-        this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
-      }
-
-      // it is possible to remove platform accessories at any time using `api.unregisterPlatformAccessories`, eg.:
-      // this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
-
-      */
+  
   }
 }

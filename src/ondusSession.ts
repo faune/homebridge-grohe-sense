@@ -164,14 +164,48 @@ export class OndusSession {
   }
 
   /**
-   * Retrieve info about a specific appliance as a JSON object
+   * Retrieve measurements performed by a specific appliance as a JSON object.
+   * fromDate and toDate can be specified to limit the response metrics
    * 
    * @param locationID Number representing the locationID for appliance
    * @param roomID Number representing the roomID for appliance
    * @param applianceID Number representing the applianceID
    */
-  public async getApplianceMeasurements(locationID: number, roomID: number, applianceID: number, fromDate: Date) {
+  public async getApplianceMeasurements(locationID: number, roomID: number, applianceID: number, fromDate?: Date, toDate?: Date) {
     this.log.debug(`getApplianceInfo(): Retrieving info about locationID=${locationID} roomID=${roomID} applianceID=${applianceID}`);
-    return this.getURL(`${this.BASE_URL}/locations/${locationID}/rooms/${roomID}/appliances/${applianceID}/data?from=${fromDate}`);
+
+    let url = `${this.BASE_URL}/locations/${locationID}/rooms/${roomID}/appliances/${applianceID}/data`;
+    if (fromDate) {
+      const fromStr = fromDate.toISOString().split('T')[0];
+      url += `?from=${fromStr}`;
+    }
+    if (toDate) {
+      const toStr = toDate.toISOString().split('T')[0];
+      url += `&to=${toStr}`;
+    }
+    return this.getURL(url);
   }
+
+
+  /** 
+   * Retrieve appliance status like battery level, type of connection and WiFi quality.
+   * Not sure what type of connection and WiFi quality is in use by the service.
+   * 
+  */
+  public async getApplianceStatus(locationID: number, roomID: number, applianceID: number) {
+    return this.getURL(`${this.BASE_URL}/locations/${locationID}/rooms/${roomID}/appliances/${applianceID}/status`);
+  }
+
 }
+
+
+/***
+ * 
+ * 
+ *    private static final String APPLIANCE_URL_TEMPLATE = "iot/locations/%d/rooms/%d/appliances/%s";
+    private static final String APPLIANCE_DATA_URL_TEMPLATE = "iot/locations/%d/rooms/%d/appliances/%s/data";
+    private static final String APPLIANCE_DATA_WITH_RANGE_URL_TEMPLATE = "iot/locations/%d/rooms/%d/appliances/%s/data?from=%s&to=%s";
+    private static final String APPLIANCE_COMMAND_URL_TEMPLATE = "iot/locations/%d/rooms/%d/appliances/%s/command";
+    private static final String APPLIANCE_STATUS_URL_TEMPLATE = "iot/locations/%d/rooms/%d/appliances/%s/status";
+ * 
+ */
