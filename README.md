@@ -31,7 +31,7 @@ You have been warned :-)
 12. Found homebridge example plugin
 13. Got example up and running
 14. Played around using TypeScript. Do I like it? Its growing - still wish it was Python, because I have trouble expressing everything I want
-15. Found more help on Ondus API from <https://github.com/gkreitz/homeassistant-grohe_sense> - cool shit and written in a proper language!
+15. Found more help on Ondus API from <https://github.com/gkreitz/homeassistant-grohe_sense> - cool shit and written in a proper language :-)
 16. Managed to piece together something bridging the example plugin framework with my superagent code from 10 worthy of showing the world
 17. Currently waiting for contributions or law suite from Grohe :-)
 
