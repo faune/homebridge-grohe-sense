@@ -23,7 +23,7 @@ You have been warned :-)
 4. I made Homebridge talk to OpenHab
 5. 4 kinda worked, but data were never refreshed
 6. Concluded OpenHab sucks (just kidding)
-7. Started looking at https://developer.homebridge.io and wondered how hard can it be?
+7. Started looking at https://developers.homebridge.io and wondered how hard can it be?
 8. Looked at FlorianSWs java code alot for figuring out the Ondus web API
 9. Spent 3 days trying to understand how 3 gazillion Node.js HTTP frameworks worked, and they all suck (just kidding.. well, not really) I mean... wtf... Seriosly, what is wrong with you guys??
 10. Found https://github.com/visionmedia/superagent which was supercool
