@@ -45,14 +45,14 @@ If you really want to know this, lets take a stroll down memory lane:
 Plugin will automatically find your Ondus devices, and expose the following HomeKit services:
 
  * Ondus Sense guard
-  - Temperature
-  - Valve state
+   - Temperature
+   - Valve state
  * Ondus Sense
-  - Temperature
-  - Humidity
+   - Temperature
+   - Humidity
  * Ondus Sense Plus (untested, as I dont have one)
-  - Temperature
-  - Humidity
+   - Temperature
+   - Humidity
 
 
 ## What is not supported
