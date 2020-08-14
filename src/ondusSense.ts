@@ -9,12 +9,11 @@ import { OndusAppliance } from './ondusAppliance';
  * Each accessory may expose multiple services of different service types.
  */
 export class OndusSense extends OndusAppliance {
-
   static ONDUS_TYPE = 101;
   static ONDUS_NAME = 'Sense';
 
-  public humidityService: Service;
-  public tempService: Service;
+  humidityService: Service;
+  tempService: Service;
 
   /**
    * Ondus Sense constructor for battery powered water leakage detectors
@@ -30,13 +29,12 @@ export class OndusSense extends OndusAppliance {
 
     // set accessory information
     this.accessory.getService(this.ondusPlatform.Service.AccessoryInformation)!
-      .setCharacteristic(this.ondusPlatform.Characteristic.Manufacturer, OndusAppliance.ONDUS_PROD)
-      .setCharacteristic(this.ondusPlatform.Characteristic.Model, OndusAppliance.ONDUS_NAME)
+      .setCharacteristic(this.ondusPlatform.Characteristic.Manufacturer, OndusSense.ONDUS_PROD)
+      .setCharacteristic(this.ondusPlatform.Characteristic.Model, OndusSense.ONDUS_NAME)
       .setCharacteristic(this.ondusPlatform.Characteristic.HardwareRevision, accessory.context.device.type)
       .setCharacteristic(this.ondusPlatform.Characteristic.SerialNumber, accessory.context.device.serial_number)
       .setCharacteristic(this.ondusPlatform.Characteristic.FirmwareRevision, accessory.context.device.version)
-      .setCharacteristic(this.ondusPlatform.Characteristic.FirmwareRevision, accessory.context.device.version)
-    ;
+      .setCharacteristic(this.ondusPlatform.Characteristic.AppMatchingIdentifier, '1451814256');
 
     // get the Humidity service if it exists, otherwise create a new Humidity service
     this.humidityService = this.accessory.getService(this.ondusPlatform.Service.HumiditySensor) || 
@@ -61,25 +59,28 @@ export class OndusSense extends OndusAppliance {
     this.updateBatteryLevel();
 
     // Start timer for fetching updated values from Ondus API once every refresh_interval from now on
+    // The reason is that sensors only report new data once every day, so no point in querying often
     let refreshInterval = this.ondusPlatform.config['refresh_interval'] * 10000;
     if (!refreshInterval) {
-      this.ondusPlatform.log.warn('Refresh interval incorrectly configured in config.json - using default value of 3600000');
+      this.ondusPlatform.log.warn(`[${this.logPrefix}] 
+      Refresh interval incorrectly configured in config.json - using default value of 3600`);
       refreshInterval = 3600000;
     }
     setInterval( () => {
       this.accessory.reachable = true; // Reset state to reachable before fetching new data
+      this.updateApplianceInfo(); // Make sure accessory context device has the latest appliance info
       this.updateTemperatureAndHumidity();
       this.updateBatteryLevel();
     }, refreshInterval);
 
   }
 
-
+  
   /**
    * Fetch Ondus Sense measurement data
    */
   updateTemperatureAndHumidity() {
-    this.ondusPlatform.log.debug('Updating temperature and humidity level');
+    this.ondusPlatform.log.debug(`[${this.logPrefix}] Updating temperature and humidity level`);
 
     // Fetch appliance measurements using current timestamp
     // If no measurements are present, the following is returned {"code":404,"message":"Not found"}
@@ -91,7 +92,7 @@ export class OndusSense extends OndusAppliance {
     let warning = '';
     if (diffSeconds > 86400) {
       const days = Math.round(diffSeconds / 86400);
-      warning = `Retrieved data is ${days} day(s) old!`;
+      warning = `[${this.logPrefix}] Retrieved data is ${days} day(s) old!`;
       this.ondusPlatform.log.warn(warning);
       this.accessory.reachable = false;
     }
@@ -100,10 +101,10 @@ export class OndusSense extends OndusAppliance {
       .then( measurement => {
         const measurementArray = measurement.body.data.measurement;
         if (!Array.isArray(measurementArray)) {
-          this.ondusPlatform.log.debug('Unknown response:', measurementArray);
+          this.ondusPlatform.log.debug(`[${this.logPrefix}] Unknown response: ${measurementArray}`);
           this.accessory.reachable = false;
         }
-        this.ondusPlatform.log.debug(`Retrieved ${measurementArray.length}: measurements - picking last one`);
+        this.ondusPlatform.log.debug(`[${this.logPrefix}] Retrieved ${measurementArray.length}: measurements - picking last one`);
         measurementArray.sort((a, b) => {
           const a_ts = new Date(a.timestamp).getSeconds();
           const b_ts = new Date(b.timestamp).getSeconds();
@@ -115,17 +116,18 @@ export class OndusSense extends OndusAppliance {
             return 0;
           }
         });
-        const temperature = measurementArray.slice(-1)[0].temperature;
-        const humidity = measurementArray.slice(-1)[0].humidity;
-        this.ondusPlatform.log.debug(`Last measured temperature level: ${temperature}`);
-        this.ondusPlatform.log.debug(`Last measured humidity level: ${humidity}%`);
+
+        const lastMeasurement = measurementArray.slice(-1)[0];
+        this.ondusPlatform.log.debug(`[${this.logPrefix}] Last measured timestamp: ${lastMeasurement.timestamp}`);
+        this.ondusPlatform.log.debug(`[${this.logPrefix}] Last measured temperature level: ${lastMeasurement.temperature}`);
+        this.ondusPlatform.log.debug(`[${this.logPrefix}] Last measured humidity level: ${lastMeasurement.humidity}%`);
 
         // Update temperature and humidity values
-        this.tempService.setCharacteristic(this.ondusPlatform.Characteristic.CurrentTemperature, temperature);
-        this.humidityService.setCharacteristic(this.ondusPlatform.Characteristic.CurrentRelativeHumidity, humidity);
+        this.tempService.updateCharacteristic(this.ondusPlatform.Characteristic.CurrentTemperature, lastMeasurement.temperature);
+        this.humidityService.updateCharacteristic(this.ondusPlatform.Characteristic.CurrentRelativeHumidity, lastMeasurement.humidity);
       })
       .catch( err => {
-        this.ondusPlatform.log.error('Unable to update temperature and humidity: ', err);
+        this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to update temperature and humidity: ${err.text}`);
         this.accessory.reachable = false;
       });
   }
@@ -140,22 +142,26 @@ export class OndusSense extends OndusAppliance {
     }
 
     // Fetch appliance status which contain battery level
-    this.ondusPlatform.log.debug('Updating battery level');
+    this.ondusPlatform.log.debug(`[${this.logPrefix}] Updating battery level`);
     this.getApplianceStatus()
       .then(info => {
         info.body.forEach(infoElement => {
           if (infoElement.type === 'battery') {
             const batteryLevel = infoElement.value;
-            this.ondusPlatform.log.debug(`Last measured battery level: ${batteryLevel}%`);
+            this.ondusPlatform.log.debug(`[${this.logPrefix}] Last measured battery level: ${batteryLevel}%`);
+
+            // Update battery level
+            this.humidityService.updateCharacteristic(this.ondusPlatform.Characteristic.BatteryLevel, batteryLevel);
+            this.tempService.updateCharacteristic(this.ondusPlatform.Characteristic.BatteryLevel, batteryLevel);
 
             // If batteryLevel is below 10% set the StatusLowBattery characteristic for both services
-            this.humidityService.setCharacteristic(this.ondusPlatform.Characteristic.StatusLowBattery, (batteryLevel > 10) ? 0 : 1);
-            this.tempService.setCharacteristic(this.ondusPlatform.Characteristic.StatusLowBattery, (batteryLevel > 10) ? 0 : 1);
+            this.humidityService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusLowBattery, (batteryLevel > 10) ? 0 : 1);
+            this.tempService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusLowBattery, (batteryLevel > 10) ? 0 : 1);
           }
         });
       })
       .catch(err => {
-        this.ondusPlatform.log.error('Unable to update battery level: ', err);
+        this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to update battery level: ${err.text}`);
         this.accessory.reachable = false;
       });
   }

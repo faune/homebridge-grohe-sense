@@ -13,6 +13,7 @@ export class OndusSenseGuard extends OndusAppliance {
   static ONDUS_NAME = 'Sense Guard';
 
   public tempService: Service;
+  public valveService: Service;
 
   /**
    * Ondus Sense Guard constructor for mains powered water control valve
@@ -32,21 +33,52 @@ export class OndusSenseGuard extends OndusAppliance {
       .setCharacteristic(this.ondusPlatform.Characteristic.HardwareRevision, accessory.context.device.type)
       .setCharacteristic(this.ondusPlatform.Characteristic.SerialNumber, accessory.context.device.serial_number)
       .setCharacteristic(this.ondusPlatform.Characteristic.FirmwareRevision, accessory.context.device.version)
-      .setCharacteristic(this.ondusPlatform.Characteristic.FirmwareRevision, accessory.context.device.version);
+      .setCharacteristic(this.ondusPlatform.Characteristic.AppMatchingIdentifier, '1451814256');
 
+
+    /**
+     * TEMPERATURE service
+     */
     // get the Temperature service if it exists, otherwise create a new Temperature service
-    // you can create multiple services for each accessory
     this.tempService = this.accessory.getService(this.ondusPlatform.Service.TemperatureSensor) || 
-        this.accessory.addService(this.ondusPlatform.Service.TemperatureSensor);
+      this.accessory.addService(this.ondusPlatform.Service.TemperatureSensor);
 
-    // set the service name, this is what is displayed as the default name on the Home app
-    // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
+    // set the Temperature service name, this is what is displayed as the default name on the Home app
     this.tempService.setCharacteristic(this.ondusPlatform.Characteristic.Name, accessory.context.device.name);
 
+    // register handlers for required temperature characteristics
+    this.tempService.getCharacteristic(this.ondusPlatform.Characteristic.CurrentTemperature)
+      .on('get', this.getMeasurements.bind(this));               // GET - bind to the `getOn` method below
+
+    /**
+     * VALVE service
+     */
+    // get the Valve service if it exists, otherwise create a new Valve service
+    this.valveService = this.accessory.getService(this.ondusPlatform.Service.Valve) ||
+      this.accessory.addService(this.ondusPlatform.Service.Valve);
+
+    // set the Valve service name, this is what is displayed as the default name on the Home app
+    this.valveService
+      .setCharacteristic(this.ondusPlatform.Characteristic.Name, accessory.context.device.name)
+      .setCharacteristic(this.ondusPlatform.Characteristic.ValveType, 'GENERIC_VALVE');
+
+    // register handlers for required valve characteristics
+    this.valveService.getCharacteristic(this.ondusPlatform.Characteristic.Active)
+      //.on('set', this.setOn.bind(this))                // SET - bind to the `setOn` method below
+      .on('get', this.getValveState.bind(this));               // GET - bind to the `getOn` method below
+
     // Fetch updated values from Ondus API on startup
-    
+    //this.updateTemperature();
+    //this.getValveState();   
+
+    /* TODO: For valve control
+    // register handlers for the On/Off Characteristic
+    this.service.getCharacteristic(this.platform.Characteristic.On)
+      .on('set', this.setOn.bind(this))                // SET - bind to the `setOn` method below
+      .on('get', this.getOn.bind(this));               // GET - bind to the `getOn` method below
+    */
+
     /*
-    this.updateTemperature();
 
     // Start timer for fetching updated values from Ondus API once every refresh_interval from now on
     let refreshInterval = this.ondusPlatform.config['refresh_interval'] * 10000;
@@ -61,35 +93,29 @@ export class OndusSenseGuard extends OndusAppliance {
     */
   }
 
+
   /**
-   * Handle requests to get the current value of the "Current Relative Humidity" characteristic
-   */
-  updateTemperature() {
-    this.ondusPlatform.log.debug('Updating temperature');
+  *  Fetch Ondus Sense Guard measurement data
+  */
+  getMeasurements(callback) {
+    this.ondusPlatform.log.debug(`[${this.logPrefix}] Updating temperature`);
 
     // Fetch appliance measurements using current timestamp
     // If no measurements are present, the following is returned {"code":404,"message":"Not found"}
 
     // Use last update timestamp from service for querying latest measurements
-    const todayDate = new Date(Date.now());
-    const fromDate = new Date(this.accessory.context.device.tdt);
-    const diffSeconds = todayDate.getSeconds() - fromDate.getSeconds();
-    let warning = '';
-    if (diffSeconds > 86400) {
-      const days = Math.round(diffSeconds / 86400);
-      warning = `Retrieved data is ${days} day(s) old!`;
-      this.ondusPlatform.log.warn(warning);
-      this.accessory.reachable = false;
-    }
+    const fromDate = new Date(Date.now());
+
     // Get fromDate measurements
     this.getApplianceMeasurements(fromDate)
       .then( measurement => {
+        //this.ondusPlatform.log.debug('res: ', measurement);
         const measurementArray = measurement.body.data.measurement;
         if (!Array.isArray(measurementArray)) {
-          this.ondusPlatform.log.debug('Unknown response:', measurementArray);
+          this.ondusPlatform.log.debug(`[${this.logPrefix}] Unknown response ${measurementArray}`);
           this.accessory.reachable = false;
         }
-        this.ondusPlatform.log.debug(`Retrieved ${measurementArray.length}: measurements - picking last one`);
+        this.ondusPlatform.log.debug(`[${this.logPrefix}] Retrieved ${measurementArray.length}: measurements - picking last one`);
         measurementArray.sort((a, b) => {
           const a_ts = new Date(a.timestamp).getSeconds();
           const b_ts = new Date(b.timestamp).getSeconds();
@@ -101,15 +127,41 @@ export class OndusSenseGuard extends OndusAppliance {
             return 0;
           }
         });
-        const temperature = measurementArray.slice(-1)[0].temperature;
-        this.ondusPlatform.log.debug(`Last measured temperature level: ${temperature}`);
+        const lastMeasurement = measurementArray.slice(-1)[0];
+        this.ondusPlatform.log.debug(`[${this.logPrefix}] Last measured timestamp: ${lastMeasurement.timestamp}`);
+        this.ondusPlatform.log.debug(`[${this.logPrefix}] Last measured temperature level: ${lastMeasurement.temperature_guard}`);
+        this.ondusPlatform.log.debug(`[${this.logPrefix}] Last measured flowrate level: ${lastMeasurement.flowrate}`);
+        this.ondusPlatform.log.debug(`[${this.logPrefix}] Last measured pressure level: ${lastMeasurement.pressure}`);
 
-        // Update temperature and humidity values
-        this.tempService.setCharacteristic(this.ondusPlatform.Characteristic.CurrentTemperature, temperature);
+        callback(null, lastMeasurement.temperature_guard);
+        
       })
       .catch( err => {
-        this.ondusPlatform.log.error('Unable to update temperature: ', err);
+        this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to update temperature: ${err}`);
         this.accessory.reachable = false;
+        callback(null);
+      });
+  }
+
+  /**
+   * Retrieve Sense Guard valve state
+   */
+  getValveState(callback) {
+
+    this.ondusPlatform.log.debug(`[${this.logPrefix}] Retrieving valve state`);
+
+    this.getApplianceCommand()
+      .then(command=> {
+        if (command.body.command.valve_open) {
+          this.ondusPlatform.log.debug(`[${this.logPrefix}] Valve is open`);
+        } else {
+          this.ondusPlatform.log.debug(`[${this.logPrefix}] Valve is closed`);
+        }
+        callback(null, command.body.command.valve_open);
+      })
+      .catch(err => {
+        this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to retrieve valve state: ${err.text}`);
+        callback(null);
       });
   }
 

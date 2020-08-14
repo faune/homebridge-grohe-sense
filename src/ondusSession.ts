@@ -146,7 +146,7 @@ export class OndusSession {
    * @param roomID Number representing the roomID for appliance
    * @param applianceID Number representing the applianceID
    */
-  public async getApplianceInfo(locationID: number, roomID: number, applianceID: number) {
+  public async getApplianceInfo(locationID: number, roomID: number, applianceID: string) {
     this.log.debug(`getApplianceInfo(): Retrieving info about locationID=${locationID} roomID=${roomID} applianceID=${applianceID}`);
     return this.getURL(`${this.BASE_URL}/locations/${locationID}/rooms/${roomID}/appliances/${applianceID}`);
   }
@@ -158,7 +158,7 @@ export class OndusSession {
    * @param roomID Number representing the roomID for appliance
    * @param applianceID Number representing the applianceID
    */
-  public async getApplianceNotifications(locationID: number, roomID: number, applianceID: number) {
+  public async getApplianceNotifications(locationID: number, roomID: number, applianceID: string) {
     this.log.debug(`getApplianceInfo(): Retrieving info about locationID=${locationID} roomID=${roomID} applianceID=${applianceID}`);
     return this.getURL(`${this.BASE_URL}/locations/${locationID}/rooms/${roomID}/appliances/${applianceID}/notifications`);
   }
@@ -171,7 +171,7 @@ export class OndusSession {
    * @param roomID Number representing the roomID for appliance
    * @param applianceID Number representing the applianceID
    */
-  public async getApplianceMeasurements(locationID: number, roomID: number, applianceID: number, fromDate?: Date, toDate?: Date) {
+  public async getApplianceMeasurements(locationID: number, roomID: number, applianceID: string, fromDate?: Date, toDate?: Date) {
     this.log.debug(`getApplianceInfo(): Retrieving info about locationID=${locationID} roomID=${roomID} applianceID=${applianceID}`);
 
     let url = `${this.BASE_URL}/locations/${locationID}/rooms/${roomID}/appliances/${applianceID}/data`;
@@ -191,9 +191,23 @@ export class OndusSession {
    * Retrieve appliance status like battery level, type of connection and WiFi quality.
    * Not sure what type of connection and WiFi quality is in use by the service.
    * 
+   * @param locationID Number representing the locationID for appliance
+   * @param roomID Number representing the roomID for appliance
+   * @param applianceID Number representing the applianceID
   */
-  public async getApplianceStatus(locationID: number, roomID: number, applianceID: number) {
+  public async getApplianceStatus(locationID: number, roomID: number, applianceID: string) {
     return this.getURL(`${this.BASE_URL}/locations/${locationID}/rooms/${roomID}/appliances/${applianceID}/status`);
+  }
+
+  /**
+   * Retrieve appliance command like valve state
+   *  
+   * @param locationID Number representing the locationID for appliance
+   * @param roomID Number representing the roomID for appliance
+   * @param applianceID Number representing the applianceID
+   */
+  public async getApplianceCommand(locationID: number, roomID: number, applianceID: string) {
+    return this.getURL(`${this.BASE_URL}/locations/${locationID}/rooms/${roomID}/appliances/${applianceID}/command`);
   }
 
 }
