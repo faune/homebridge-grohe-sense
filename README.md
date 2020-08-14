@@ -10,7 +10,7 @@
 
 This is my first attempt at:
 
-1. Typescript
+1. Typescript / Javascript
 2. Homebridge plugin
 
 You have been warned :-)
