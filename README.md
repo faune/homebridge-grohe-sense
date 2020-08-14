@@ -19,7 +19,7 @@ You have been warned :-)
 
 1. <https://homebridge.io> is AWESOME! Props to everyone who contributed
 2. I couldnt find a Ondus Sense plugin for homebridge :-(
-3. I configured OpenHab with FlorianSWs >https://github.com/openhab/openhab-addons/blob/2.5.x/bundles/org.openhab.binding.groheondus/>
+3. I configured OpenHab with FlorianSW <https://github.com/openhab/openhab-addons/blob/2.5.x/bundles/org.openhab.binding.groheondus/>
 4. I made Homebridge talk to OpenHab
 5. 4 kinda worked, but data were never refreshed
 6. Concluded OpenHab sucks (just kidding)
@@ -32,7 +32,7 @@ You have been warned :-)
 13. Got example up and running
 14. Played around using TypeScript. Do I like it? Its growing - still wish it was Python, because I have trouble expressing everything I want
 15. Found more help on Ondus API from <https://github.com/gkreitz/homeassistant-grohe_sense> - cool shit and written in a proper language!
-16. Managed to piece together something worthy of showing the world
+16. Managed to piece together something bridging the example plugin framework with my superagent code from 10 worthy of showing the world
 17. Currently waiting for contributions or law suite from Grohe :-)
 
 
@@ -41,26 +41,31 @@ You have been warned :-)
 
 Plugin will automatically find your Ondus devices, and expose the following HomeKit services:
 
-* Ondus Sense guard
- ** Temperature
- ** Valve state
-* Ondus Sense
- ** Temperature
- ** Humidity
-* Ondus Sense Plus (untested)
- ** Temperature
- ** Humidity
+ * Ondus Sense guard
+  - Temperature
+  - Valve state
+ * Ondus Sense
+  - Temperature
+  - Humidity
+ * Ondus Sense Plus (untested, as I dont have one)
+  - Temperature
+  - Humidity
+
 
 ## What is not supported
 
+* Publish plugin for homebridge, so it shows up in searches (but would like to polish it a bit more)
 * Acquiring refresh token with username/password. I will probably get around to do this soonish.
 * Controlling the Guard valve state
 * Displaying water pressure and flow metrics
 
 ## What I would like to see in the future
-
-* Eve history
+ 
+* Proper OAuth library handling authentication
+* I have no idea where/how to handle exceptions and errors, so this is probably FUBAR right now. Help anyone?
+* Eve history would be awesome using Fakegato
 * Displaying water pressure and flow metrics, but I have no idea what characteristics to use in Homebridge for this...
+* Control Guard valve. This is pretty simple to add, but so far I dont have a use-case for it and my kids have access to my HomeKit config as well, so ...
 
 ## Configuration section in config.json
 
@@ -117,11 +122,11 @@ This value is the `refresh token` you should save as described above.
 
 ## Testing on your homebridge setup
 
-git clone https://github.com/faune/homebridge-plugin-ondus
-cd homebridge-plugin-ondus
-npm install
-npm run build
-npm link
-homebridge -D
+1. git clone https://github.com/faune/homebridge-plugin-ondus
+2. cd homebridge-plugin-ondus
+3. npm install
+4. npm run build
+5. npm link
+6. homebridge -D
 
 
