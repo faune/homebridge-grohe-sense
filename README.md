@@ -57,7 +57,6 @@ Plugin will automatically find your Ondus devices, and expose the following Home
 
 ## What is not supported
 
-* Publish plugin for homebridge, so it shows up in searches (but would like to polish it a bit more)
 * Acquiring refresh token with username/password. I will probably get around to do this soonish.
 * Controlling the Guard valve state
 * Displaying water pressure and flow metrics
