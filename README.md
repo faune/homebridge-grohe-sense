@@ -17,6 +17,8 @@ You have been warned :-)
 
 ## Why did I do this
 
+If you really want to know this, lets take a stroll down memory lane:
+
 1. <https://homebridge.io> is AWESOME! Props to everyone who contributed
 2. I couldnt find a Ondus Sense plugin for homebridge :-(
 3. I configured OpenHab with FlorianSW <https://github.com/openhab/openhab-addons/blob/2.5.x/bundles/org.openhab.binding.groheondus/>
@@ -33,7 +35,8 @@ You have been warned :-)
 14. Played around using TypeScript. Do I like it? Its growing - still wish it was Python, because I have trouble expressing everything I want
 15. Found more help on Ondus API from <https://github.com/gkreitz/homeassistant-grohe_sense> - cool shit and written in a proper language :-)
 16. Managed to piece together something bridging the example plugin framework with my superagent code from 10 worthy of showing the world
-17. Currently waiting for contributions or law suite from Grohe :-)
+17. Had lots of fun learning new shit
+18. Currently waiting for contributions or law suite from Grohe
 
 
 
