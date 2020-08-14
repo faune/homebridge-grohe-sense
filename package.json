@@ -1,7 +1,6 @@
 {
-  "private": true,
   "displayName": "Ondus",
-  "name": "homebridge-plugin-ondus",
+  "name": "@faune/homebridge-plugin-ondus",
   "version": "1.0.0",
   "description": "Grohe Ondus Sense and Sense Guard support.",
   "license": "Apache-2.0",
@@ -40,5 +39,7 @@
     "rimraf": "^3.0.2",
     "ts-node": "^8.10.2",
     "typescript": "^3.9.5"
-  }
+  },
+  "homepage": "https://github.com/faune/homebridge-plugin-ondus#readme",
+  "author": "Frank Aune"
 }
