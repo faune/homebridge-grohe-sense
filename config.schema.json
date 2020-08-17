@@ -32,10 +32,20 @@
         "default": ""
       },
       "refresh_interval" : {
-        "description":"How often (in seconds) to query the Ondus API for new data",
-        "type": "number",
-        "required": true,
-        "default" : 3600
+        "title":"How often (in seconds) to query the Ondus API for new Sense sensor data",
+        "description":"Sense sensors will by default report data once every 24 hours, unless a configured notification threshold is exceeded. Default refresh value is by default 1 hour (3600 seconds) for the Sense sensors. The Sense Guard sensor data will always be queried in realtime when required.",
+        "type": "integer",
+        "required": false,
+        "default" : 3600,
+        "minimum" : 60,
+        "maximum" : 86400
+      },
+      "valve_control" : {
+        "title":"Control Sense Guard inlet valve from HomeKit",
+        "description":"Only enable this checkbox if you really, really, REALLY think controlling your Sense Guard inlet valve from HomeKit is a good idea. If this option is left unchecked (or not configured in config.json) the default behavior is to simply display the current state of the valve. Requests to alter the valve state will simply be ignored.",
+        "type": "boolean",
+        "required": false,
+        "default": false
       }
     }
   }
