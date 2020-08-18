@@ -10,7 +10,7 @@ import { OndusPlatform } from './ondusPlatform';
  */
 export abstract class OndusAppliance {
   static ONDUS_TYPE = 0;
-  static ONDUS_PROD = 'Grohe'
+  static ONDUS_PROD = 'Grohe AG'
   static ONDUS_NAME = 'Overload me';
 
   logPrefix: string;

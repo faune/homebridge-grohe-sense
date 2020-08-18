@@ -10,30 +10,31 @@ import { OndusSenseGuard } from './ondusSenseGuard';
 import { OndusSession } from './ondusSession';
 
 /* TODO: When implementing notification support
-
 // The protocol returns notification information as a {category: type}
-NOTIFICATION_TYPES = { 
-  {10:60} : 'Firmware update available',
-  (10,460) : 'Firmware update available',
-  (20,11) : 'Battery low',
-  (20,12) : 'Battery empty',
-  (20,20) : 'Below temperature threshold',
-  (20,21) : 'Above temperature threshold',
-  (20,30) : 'Below humidity threshold',
-  (20,31) : 'Above humidity threshold',
-  (20,40) : 'Frost warning',
-  (20,80) : 'Lost wifi',
-  (20,320) : 'Unusual water consumption (water shut off)',
-  (20,321) : 'Unusual water consumption (water not shut off)',
-  (20,330) : 'Micro leakage',
-  (20,340) : 'Frost warning',
-  (20,380) : 'Lost wifi',
-  (30,0) : 'Flooding',
-  (30,310) : 'Pipe break',
-  (30,400) : 'Maximum volume reached',
-  (30,430) : 'Sense detected water (water shut off)',
-  (30,431) : 'Sense detected water (water not shut off)',
-  }
+export interface IHash {
+  [details: string] : string;
+} 
+const NOTIFICATION_TYPES: IHash = {};
+NOTIFICATION_TYPES['(10,60)'] = 'Firmware update available';
+NOTIFICATION_TYPES['(10,460)'] = 'Firmware update available';
+NOTIFICATION_TYPES['(20,11)'] = 'Battery low';
+NOTIFICATION_TYPES['(20,12)'] = 'Battery empty';
+NOTIFICATION_TYPES['(20,20'] = 'Below temperature threshold';
+NOTIFICATION_TYPES['(20,21'] = 'Above temperature threshold';
+NOTIFICATION_TYPES['(20,30'] = 'Below humidity threshold';
+NOTIFICATION_TYPES['(20,31'] = 'Above humidity threshold';
+NOTIFICATION_TYPES['(20,40'] = 'Frost warning';
+NOTIFICATION_TYPES['(20,80'] = 'Lost wifi';
+NOTIFICATION_TYPES['(20,320'] = 'Unusual water consumption (water shut off)';
+NOTIFICATION_TYPES['(20,321'] = 'Unusual water consumption (water not shut off)';
+NOTIFICATION_TYPES['(20,330'] = 'Micro leakage';
+NOTIFICATION_TYPES['(20,340'] = 'Frost warning';
+NOTIFICATION_TYPES['(20,380'] = 'Lost wifi';
+NOTIFICATION_TYPES['(30,0'] = 'Flooding';
+NOTIFICATION_TYPES['(30,310'] = 'Pipe break';
+NOTIFICATION_TYPES['(30,400'] = 'Maximum volume reached';
+NOTIFICATION_TYPES['(30,430'] = 'Sense detected water (water shut off)';
+NOTIFICATION_TYPES['(30,431)'] = 'Sense detected water (water not shut off)';
 */
 
 /**
@@ -59,17 +60,13 @@ export class OndusPlatform implements DynamicPlatformPlugin {
 
     // Validate config
     if (!this.config['refresh_token'] && (!this.config['username'] || !this.config['password'])) {
-      this.log.error('Must configure either refresh_token, or username and password, in "%s" section of config.json', this.config.name);
-      //TODO: Additional error handling?
+      const err = `Must configure either refresh_token, or username and password, in "${this.config.name}" section of config.json`;
+      this.log.error(err);
+      throw new Error(err);
     } 
-    
-    
 
     // Instantiate Ondus session for handling web comms
-    this.ondusSession = new OndusSession(this.log, 
-      this.config['refresh_token'],
-      this.config['username'],
-      this.config['password']);
+    this.ondusSession = new OndusSession(this.log, this.config);
 
     this.log.debug('Finished initializing platform:', this.config.name);
 
@@ -103,16 +100,26 @@ export class OndusPlatform implements DynamicPlatformPlugin {
   async discoverDevices() {
 
     this.log.debug('Fetching Ondus devices');
-    //TODO: Query Ondus web for devices and add dynamically
-
+ 
+    // Query Ondus web for devices and dynamically add discovered devices
     await this.ondusSession.login()
-      .then(response => {
-        this.log.debug(`Function login() successfull - HTTP_STATUS_CODE=${response.status}`);   
+      .then(loginStatus => {
+        if (loginStatus) {
+          this.log.info('Ondus API login() successful');
+        } else {
+          this.log.error('Ondus API login() failed');
+        }
       })
       .catch(err => {
-        throw err;
+        this.log.error(`Function login() failed: ${err}`);
       });
-  
+
+    if (!this.ondusSession.loggedIn) {
+      // No point in continuing if login() failed
+      return;
+    }
+    
+    
     // Retrieve all locations
     await this.ondusSession.getLocations()
       .then(locations => {
@@ -138,19 +145,22 @@ export class OndusPlatform implements DynamicPlatformPlugin {
                   })
                   // Error handler for appliances
                   .catch(err => {
-                    throw err;
+                    const errMsg = `Error during appliances refresh: ${err}`;
+                    this.log.error(errMsg);
                   });
               });
             })
             // Error handler for rooms
             .catch(err => {
-              throw err;
+              const errMsg = `Error during rooms refresh: ${err}`;
+              this.log.error(errMsg);
             });
         });
       })
       // Error handler for locations
       .catch(err => {
-        throw err;
+        const errMsg = `Error during locations refresh: ${err}`;
+        this.log.error(errMsg);
       });
   }
 
