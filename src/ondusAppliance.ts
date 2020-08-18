@@ -64,7 +64,6 @@ export abstract class OndusAppliance {
       })
       .catch( err => {
         this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to update appliance info: ${err.text}`);
-        this.accessory.reachable = false;
       });
   }
 

@@ -165,7 +165,6 @@ export class OndusSenseGuard extends OndusAppliance {
         const measurementArray = measurement.body.data.measurement;
         if (!Array.isArray(measurementArray)) {
           this.ondusPlatform.log.debug(`[${this.logPrefix}] Unknown response ${measurementArray}`);
-          this.accessory.reachable = false;
         }
         this.ondusPlatform.log.debug(`[${this.logPrefix}] Retrieved ${measurementArray.length}: measurements - picking last one`);
         measurementArray.sort((a, b) => {
@@ -195,8 +194,6 @@ export class OndusSenseGuard extends OndusAppliance {
         // Set StatusFault characteristics
         this.valveService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
           this.ondusPlatform.Characteristic.StatusFault.GENERAL_FAULT);
-
-        this.accessory.reachable = false;
       });
   }
 
@@ -222,8 +219,6 @@ export class OndusSenseGuard extends OndusAppliance {
         // Set StatusFault characteristics
         this.valveService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
           this.ondusPlatform.Characteristic.StatusFault.GENERAL_FAULT);
-
-        this.accessory.reachable = false;
       });
   }
 

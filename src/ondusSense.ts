@@ -120,9 +120,7 @@ export class OndusSense extends OndusAppliance {
       Refresh interval incorrectly configured in config.json - using default value of 3600`);
       refreshInterval = 3600000;
     }
-    setInterval( () => {
-      // Reset state to reachable before fetching new data
-      this.accessory.reachable = true; 
+    setInterval( () => { 
       
       // Reset StatusFault characteristics
       [this.humidityService, this.tempService].forEach( service => {
@@ -203,7 +201,6 @@ export class OndusSense extends OndusAppliance {
       const days = Math.round(diffSeconds / 86400);
       warning = `[${this.logPrefix}] Retrieved data is ${days} day(s) old!`;
       this.ondusPlatform.log.warn(warning);
-      this.accessory.reachable = false;
     }
     // Get fromDate measurements
     this.getApplianceMeasurements(fromDate)
@@ -241,7 +238,6 @@ export class OndusSense extends OndusAppliance {
           service.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
             this.ondusPlatform.Characteristic.StatusFault.GENERAL_FAULT);
         });
-        this.accessory.reachable = false;
       });
   }
 
@@ -273,8 +269,6 @@ export class OndusSense extends OndusAppliance {
           service.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
             this.ondusPlatform.Characteristic.StatusFault.GENERAL_FAULT);
         });
-
-        this.accessory.reachable = false;
       });
   }
 }
