@@ -31,15 +31,15 @@ export class OndusSession {
     this.loggedIn = false;
 
     if (config['refresh_token']) {
-      this.log.debug('Got refreshToken: ', config['refresh_token']);
+      this.log.debug('refreshToken: ', config['refresh_token']);
       this.refreshToken = config['refresh_token'];
     }
     if (config['username']) {
-      this.log.debug('Got username: ', config['username']);
+      this.log.debug('username: ', config['username']);
       this.username = config['username'];
     }
     if (this.config['password']) {
-      this.log.debug('Got password: ', '<secret>');//this.config['password']);
+      this.log.debug('password: ', '<secret>');//this.config['password']);
       this.password = this.config['password'];
     }
   }
@@ -77,6 +77,21 @@ export class OndusSession {
           this.loggedIn = true;
         });
     }
+
+    // Make sure we refresh the access token once it expires
+    setInterval( () => { 
+      this.log.info('Access token has expired - refreshing ...');
+      this.refreshAccessToken()
+        .then( () => {
+          this.log.info(`Access token successfully refreshed - next refresh will happen in ${this.accessTokenExpireIn*1000} seconds`);
+          this.loggedIn = true;
+        })
+        .catch( err => {
+          this.log.error(`Unable to refresh access token after ${this.accessTokenExpireIn*1000} seconds: ${err}`);
+          this.loggedIn = false;
+        });
+    }, this.accessTokenExpireIn * 1000);
+
     return this.loggedIn;
   }
 
@@ -229,7 +244,7 @@ export class OndusSession {
     if (!this.accessToken) {
       this.log.error('getURL(): Cannot call getURL() before an access token has been acquired');
     }
-    this.log.debug('getURL(): Fetching: ', url);
+    this.log.debug('getURL(): GET: ', url);
     
     return new Promise<superagent.Response>((resolve, reject) => {
       superagent
@@ -240,6 +255,37 @@ export class OndusSession {
         .end((err, res) => {
           if (err) {
             const errMsg = `getURL(): Unexpected server response: ${err.response}`;
+            reject(errMsg);
+          } else {
+            resolve(res);
+          }
+        });
+    });
+  }
+
+  /**
+   * Private helper method to re-use Promise together with superagent query.
+   * This function must only be called after a successful login() has been
+   * performed, as it depends on a valid access token.
+   * 
+   * @param url URL address to perform a POST against
+   */
+  private async postURL(url: string, data) {
+    if (!this.accessToken) {
+      this.log.error('postURL(): Cannot call postURL() before an access token has been acquired');
+    }
+    this.log.debug('postURL(): POST: ', url);
+    
+    return new Promise<superagent.Response>((resolve, reject) => {
+      superagent
+        .post(url)
+        .set('Content-Type', 'application/json')
+        .set('Authorization', `Bearer ${this.accessToken}`)
+        .set('accept', 'json')
+        .send(data)
+        .end((err, res) => {
+          if (err) {
+            const errMsg = `postURL(): Unexpected server response: ${err}`;
             reject(errMsg);
           } else {
             resolve(res);
@@ -338,7 +384,9 @@ export class OndusSession {
   }
 
   /**
-   * Retrieve appliance command like valve state
+   * Retrieve appliance command. Examples of supported accessory commands:
+   * - Sense Guard : current valve state
+   * - Sense : unknown
    *  
    * @param locationID Number representing the locationID for appliance
    * @param roomID Number representing the roomID for appliance
@@ -348,4 +396,17 @@ export class OndusSession {
     return this.getURL(`${this.BASE_URL}/locations/${locationID}/rooms/${roomID}/appliances/${applianceID}/command`);
   }
 
+  /**
+   * Set appliance command. Examples of supported accessory commands:
+   * - Sense guard: Open or close valve
+   * - Sense: unknown
+   *  
+   * @param locationID Number representing the locationID for appliance
+   * @param roomID Number representing the roomID for appliance
+   * @param applianceID Number representing the applianceID
+   * @param data Data structure to POST
+   */
+  public async setApplianceCommand(locationID: number, roomID: number, applianceID: string, data) {
+    return this.postURL(`${this.BASE_URL}/locations/${locationID}/rooms/${roomID}/appliances/${applianceID}/command`, data);
+  }
 }

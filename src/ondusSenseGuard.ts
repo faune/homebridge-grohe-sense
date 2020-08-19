@@ -12,14 +12,14 @@ export class OndusSenseGuard extends OndusAppliance {
   static ONDUS_TYPE = 103;
   static ONDUS_NAME = 'Sense Guard';
 
-  static VALVE_OPEN = 1;
-  static VALVE_CLOSED = 0;
+  static VALVE_OPEN = true;
+  static VALVE_CLOSED = false;
 
   temperatureService: Service;
   valveService: Service;
 
   private currentTemperature: number;
-  private currentValveState: number = OndusSenseGuard.VALVE_OPEN | OndusSenseGuard.VALVE_CLOSED;
+  private currentValveState: boolean = OndusSenseGuard.VALVE_OPEN || OndusSenseGuard.VALVE_CLOSED;
   private currentFlowRate: number;
   private currentPressure: number;
   private currentTimestamp: string;
@@ -59,11 +59,16 @@ export class OndusSenseGuard extends OndusAppliance {
     // get the Temperature service if it exists, otherwise create a new Temperature service
     this.temperatureService = this.accessory.getService(this.ondusPlatform.Service.TemperatureSensor) || 
        this.accessory.addService(this.ondusPlatform.Service.TemperatureSensor);
-    // set the Temperature service name, this is what is displayed as the default name on the Home app
-    this.temperatureService.setCharacteristic(this.ondusPlatform.Characteristic.Name, accessory.context.device.name);
-    // create handlers for required characteristics for Temperature service
+    
+    // set the Temperature service characteristics
+    this.temperatureService
+      .setCharacteristic(this.ondusPlatform.Characteristic.Name, accessory.context.device.name)
+      .setCharacteristic(this.ondusPlatform.Characteristic.StatusFault, this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
+    
+    // create handlers for required characteristics of Temperature service
     this.temperatureService.getCharacteristic(this.ondusPlatform.Characteristic.CurrentTemperature)
       .on('get', this.handleCurrentTemperatureGet.bind(this));
+
 
     /**
      * Valve service
@@ -71,22 +76,20 @@ export class OndusSenseGuard extends OndusAppliance {
     // get the Valve service if it exists, otherwise create a new Valve service
     this.valveService = this.accessory.getService(this.ondusPlatform.Service.Valve) ||
       this.accessory.addService(this.ondusPlatform.Service.Valve);
-
-    // set the Valve service name, this is what is displayed as the default name on the Home app
+    
+    // set the Valve service characteristics
     this.valveService
       .setCharacteristic(this.ondusPlatform.Characteristic.Name, accessory.context.device.name)
-      .setCharacteristic(this.ondusPlatform.Characteristic.ValveType, this.ondusPlatform.Characteristic.ValveType.GENERIC_VALVE);
+      .setCharacteristic(this.ondusPlatform.Characteristic.ValveType, this.ondusPlatform.Characteristic.ValveType.GENERIC_VALVE)
+      .setCharacteristic(this.ondusPlatform.Characteristic.StatusFault, this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
 
-    // register handlers for mandatory valve characteristics
+    // register handlers for required characteristics of Valve service
     this.valveService.getCharacteristic(this.ondusPlatform.Characteristic.Active)
       .on('get', this.handleActiveGet.bind(this))
       .on('set', this.handleActiveSet.bind(this));
 
     this.valveService.getCharacteristic(this.ondusPlatform.Characteristic.InUse)
       .on('get', this.handleInUseGet.bind(this));
-
-    this.valveService.getCharacteristic(this.ondusPlatform.Characteristic.ValveType)
-      .on('get', this.handleValveTypeGet.bind(this));
 
   }
 
@@ -95,7 +98,13 @@ export class OndusSenseGuard extends OndusAppliance {
    */
   handleCurrentTemperatureGet(callback) {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET CurrentTemperature`);
-    callback(null, this.currentTemperature);
+    this.getMeasurements()
+      .then ( () => {
+        callback(null, this.currentTemperature);
+      })
+      .catch( err => {
+        callback(err, this.currentTemperature);
+      });
   }
 
   /**
@@ -103,7 +112,15 @@ export class OndusSenseGuard extends OndusAppliance {
    */
   handleActiveGet(callback) {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET Active`);
-    callback(null, this.currentValveState);
+    //this.ondusPlatform.log.debug('GET reporting: ', this.currentValveState);
+    this.getValveState()
+      .then( () => {
+        callback(null, this.currentValveState);
+      })
+      .catch( err => {
+        callback(err, this.currentValveState);
+      });
+    
   }
 
   /**
@@ -111,21 +128,35 @@ export class OndusSenseGuard extends OndusAppliance {
    */
   handleActiveSet(value, callback) {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered SET Active: ${value}`);
-    // eslint-disable-next-line max-len
-    this.ondusPlatform.log.debug(`[${this.logPrefix}] If you really, really, REALLY want to control your main inlet valve through HomeKit, please enable this feature in the plugin settings`);
     
-    // Logic
-    this.currentValveState = value;
-    if (this.currentValveState > 0) {
-      this.currentFlowRate = 1;
+    if (!this.ondusPlatform.config['valve_control']) {
+      // eslint-disable-next-line max-len
+      this.ondusPlatform.log.warn(`[${this.logPrefix}] If you really, really, REALLY want to control your main water inlet valve through HomeKit, please enable this feature in the plugin settings`);
+      callback(null);
     } else {
-      this.currentFlowRate = 0;
+      // Set valve state to value
+      //this.ondusPlatform.log.debug('before state is: ', this.currentValveState);
+      this.setValveState(value === 1 ? true: false)
+        .then( () => {
+          //this.ondusPlatform.log.debug(`after state is ${this.currentValveState} ${res}`);
+          callback(null);
+        })
+        .catch( err => {
+          // An error occured, so indicate this to the callback handler
+          callback(err);
+        });
     }
-    callback(null);
   }
 
   /**
    * Handle requests to get the current value of the "In Use" characteristic
+   * 
+   * This does not return InUse characteristics in real-time, but depends on the
+   * getCurrentTemperatureGet() method, which - in addition to temperature - 
+   * also extracts the flowrate and water pressure. 
+   * 
+   * Current assumption is that the getCurrentTemperatureGet() method will most 
+   * likely be triggered when handleInUseGet() is triggered.
    */
   handleInUseGet(callback) {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET InUse`);
@@ -136,90 +167,170 @@ export class OndusSenseGuard extends OndusAppliance {
 
 
   /**
-   * Handle requests to get the current value of the "Valve Type" characteristic
-   */
-  handleValveTypeGet(callback) {
-    this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET ValveType`);
-    callback(null, this.valveService.getCharacteristic(this.ondusPlatform.Characteristic.ValveType));
-  }
-
-
-
-
-  /**
-  *  Fetch Ondus Sense Guard measurement data
+  * Fetch Ondus Sense Guard measurement data. Returns a promise that will be resolved
+   * once measurement data has been queried from the Ondus API.
   */
   getMeasurements() {
-    this.ondusPlatform.log.debug(`[${this.logPrefix}] Updating temperature`);
+    this.ondusPlatform.log.debug(`[${this.logPrefix}] Updating temperature, flowrate, and pressure readings`);
 
     // Fetch appliance measurements using current timestamp
     // If no measurements are present, the following is returned {"code":404,"message":"Not found"}
 
     // Use last update timestamp from service for querying latest measurements
-    const fromDate = new Date(Date.now());
 
-    // Get fromDate measurements
-    this.getApplianceMeasurements(fromDate)
-      .then( measurement => {
-        //this.ondusPlatform.log.debug('res: ', measurement);
-        const measurementArray = measurement.body.data.measurement;
-        if (!Array.isArray(measurementArray)) {
-          this.ondusPlatform.log.debug(`[${this.logPrefix}] Unknown response ${measurementArray}`);
-        }
-        this.ondusPlatform.log.debug(`[${this.logPrefix}] Retrieved ${measurementArray.length}: measurements - picking last one`);
-        measurementArray.sort((a, b) => {
-          const a_ts = new Date(a.timestamp).getSeconds();
-          const b_ts = new Date(b.timestamp).getSeconds();
-          if(a_ts > b_ts) {
-            return 1;
-          } else if(a_ts < b_ts) {
-            return -1;
-          } else {
-            return 0;
-          }
-        });
-        const lastMeasurement = measurementArray.slice(-1)[0];
-        this.currentTimestamp = lastMeasurement.timestamp;
-        this.currentTemperature = lastMeasurement.temperature_guard;
-        this.currentFlowRate = lastMeasurement.flowrate;
-        this.currentPressure = lastMeasurement.pressure;
-        this.ondusPlatform.log.debug(`[${this.logPrefix}] Last measured timestamp: ${this.currentTimestamp}`);
-        this.ondusPlatform.log.debug(`[${this.logPrefix}] Last measured temperature level: ${this.currentTemperature}`);
-        this.ondusPlatform.log.debug(`[${this.logPrefix}] Last measured flowrate level: ${this.currentFlowRate}`);
-        this.ondusPlatform.log.debug(`[${this.logPrefix}] Last measured pressure level: ${this.currentPressure}`);        
-      })
-      .catch( err => {
-        this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to update temperature: ${err}`);
+    // Return new promise to caller before calling into async function, and resolve 
+    // this promise when getApplianceCommand promise has been resolved and result processed.
+    // This will prevent handleActiveGet() function returning incorrect value for currentValveState
+    return new Promise<number>((resolve, reject) => {
         
-        // Set StatusFault characteristics
-        this.valveService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
-          this.ondusPlatform.Characteristic.StatusFault.GENERAL_FAULT);
-      });
+      // Get fromDate measurements
+      const fromDate = new Date(Date.now());
+
+      // Retrieve latest Sense Guard measurement metrics
+      this.getApplianceMeasurements(fromDate)
+        .then( measurement => {
+        //this.ondusPlatform.log.debug('res: ', measurement);
+          const measurementArray = measurement.body.data.measurement;
+          if (!Array.isArray(measurementArray)) {
+            this.ondusPlatform.log.debug(`[${this.logPrefix}] Unknown response ${measurement.body}`);
+          }
+          this.ondusPlatform.log.debug(`[${this.logPrefix}] Retrieved ${measurementArray.length} measurements - picking last one`);
+          measurementArray.sort((a, b) => {
+            const a_ts = new Date(a.timestamp).getTime();
+            const b_ts = new Date(b.timestamp).getTime();
+            if(a_ts > b_ts) {
+              return 1;
+            } else if(a_ts < b_ts) {
+              return -1;
+            } else {
+              return 0;
+            }
+          });
+          const lastMeasurement = measurementArray.slice(-1)[0];
+          this.currentTimestamp = lastMeasurement.timestamp;    
+          this.currentFlowRate = lastMeasurement.flowrate;
+          this.currentPressure = lastMeasurement.pressure;
+          this.currentTemperature = lastMeasurement.temperature_guard;
+          this.ondusPlatform.log.info(`[${this.logPrefix}] Last measured timestamp: ${this.currentTimestamp}`);
+          this.ondusPlatform.log.info(`[${this.logPrefix}] Last measured flowrate level: ${this.currentFlowRate}`);
+          this.ondusPlatform.log.info(`[${this.logPrefix}] Last measured pressure level: ${this.currentPressure}`);
+          this.ondusPlatform.log.info(`[${this.logPrefix}] Last measured temperature level: ${this.currentTemperature}`);
+
+          // Reset StatusFault characteristics for temperature service
+          this.temperatureService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
+            this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
+          
+          // Resolve promise to handleCurrentTemperatureGet()
+          resolve(this.currentTemperature);
+        })
+        .catch( err => {
+          this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to update temperature: ${err}`);
+        
+          // Set StatusFault characteristics for temperature service
+          this.temperatureService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
+            this.ondusPlatform.Characteristic.StatusFault.GENERAL_FAULT);
+
+          // Reject promise to handleCurrentTemperatureGet() and return last known temperature
+          reject(this.currentTemperature);
+        });
+    });
   }
 
   /**
-   * Retrieve Sense Guard valve state
+   * Retrieve Sense Guard valve state. Returns a promise that will be resolved
+   * once valve state has been queried from the Ondus API.
    */
   getValveState() {
+    this.ondusPlatform.log.debug(`[${this.logPrefix}] Retrieving main water inlet valve state`);
 
-    this.ondusPlatform.log.debug(`[${this.logPrefix}] Retrieving valve state`);
+    // Return new promise to caller before calling into async function, and resolve 
+    // this promise when getApplianceCommand promise has been resolved and result processed.
+    // This will prevent handleActiveGet() function returning incorrect value for currentValveState
+    return new Promise<boolean>((resolve, reject) => {
+      this.getApplianceCommand()
+        .then(res => {
+          this.currentValveState = res.body.command.valve_open;
+          if (this.currentValveState) {
+            this.ondusPlatform.log.debug(`[${this.logPrefix}] Main water inlet valve is open`);
+          } else {
+            this.ondusPlatform.log.debug(`[${this.logPrefix}] Main water inlet valve is closed`);
+          }
 
-    this.getApplianceCommand()
-      .then(command => {
-        this.currentValveState = command.body.command.valve_open;
-        if (this.currentValveState) {
-          this.ondusPlatform.log.debug(`[${this.logPrefix}] Valve is open`);
-        } else {
-          this.ondusPlatform.log.debug(`[${this.logPrefix}] Valve is closed`);
-        }
-      })
-      .catch(err => {
-        this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to retrieve valve state: ${err.text}`);
+          // Reset StatusFault characteristics for valve service
+          this.temperatureService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
+            this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
+          this.valveService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
+            this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
+                
+          // Resolve promise to handleActiveGet()
+          resolve(this.currentValveState);
+        })
+        .catch(err => {
+          this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to retrieve main water inlet valve state: ${err}`);
 
-        // Set StatusFault characteristics
-        this.valveService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
-          this.ondusPlatform.Characteristic.StatusFault.GENERAL_FAULT);
-      });
+          // Set StatusFault characteristics for temperature and valve service
+          this.valveService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
+            this.ondusPlatform.Characteristic.StatusFault.GENERAL_FAULT);
+          
+          // Resolve promise to handleActiveGet() and return last known valve state
+          reject(this.currentValveState);
+        });
+    });
+  }
+
+  /**
+   * Control the Ondus Sense Guard valve. Returns a promise that will be resolved
+   * once valve state has been configured through Ondus API.
+   *  
+   * @param valveState true if valve is to be opened, false if valve is to be closed
+   */
+  setValveState(valveState: boolean) {
+
+    // Log input
+    if (valveState === OndusSenseGuard.VALVE_OPEN) {
+      this.ondusPlatform.log.warn(`[${this.logPrefix}] Opening main water inlet valve`);
+    } else {
+      this.ondusPlatform.log.warn(`[${this.logPrefix}] Closing main water inlet valve`);
+    }
+
+    // Construct payload for controlling valve state
+    const data = {'type': OndusSenseGuard.ONDUS_TYPE, 'command' : { 'valve_open': valveState } };
+
+    // Return new promise to caller before calling into async function, and resolve 
+    // this promise when setApplianceCommand promise has been resolved and result processed.
+    // This will prevent handleActiveSet() function returning incorrect value for currentValveState
+    return new Promise<boolean>((resolve, reject) => {
+      this.setApplianceCommand(data)
+        .then(res => {
+          //this.ondusPlatform.log.debug('res: ', res.body);
+          this.currentValveState = res.body.command.valve_open;
+          if (this.currentValveState) {
+            this.ondusPlatform.log.warn(`[${this.logPrefix}] Main water inlet valve has been opened`);
+            this.currentValveState = OndusSenseGuard.VALVE_OPEN;
+          } else {
+            this.ondusPlatform.log.warn(`[${this.logPrefix}] Main water inlet valve has been closed`);
+            this.currentValveState = OndusSenseGuard.VALVE_CLOSED;
+          }
+
+          // Reset StatusFault characteristics for valve service
+          this.valveService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
+            this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
+
+          // Resolve promise to handleActiveSet()
+          resolve(this.currentValveState);
+        })
+        .catch(err => {
+          //this.ondusPlatform.log.debug('err:', err);
+          this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to retrieve valve state: ${err}`);
+
+          // Set StatusFault characteristics for valve service
+          this.valveService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
+            this.ondusPlatform.Characteristic.StatusFault.GENERAL_FAULT);
+
+          // Reject promise to handleActiveSet() and return last known valve state
+          reject(this.currentValveState);
+        });
+    });
   }
 
 }

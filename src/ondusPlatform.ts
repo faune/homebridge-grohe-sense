@@ -38,9 +38,7 @@ NOTIFICATION_TYPES['(30,431)'] = 'Sense detected water (water not shut off)';
 */
 
 /**
- * HomebridgePlatform
- * This class is the main constructor for your plugin, this is where you should
- * parse the user config and discover/register accessories with Homebridge.
+ * Ondus Platform constructor
  */
 export class OndusPlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service = this.api.hap.Service;
@@ -56,7 +54,6 @@ export class OndusPlatform implements DynamicPlatformPlugin {
     public readonly config: PlatformConfig,
     public readonly api: API,
   ) {
-    this.log.debug('Creating Ondus service session');
 
     // Validate config
     if (!this.config['refresh_token'] && (!this.config['username'] || !this.config['password'])) {
@@ -65,9 +62,9 @@ export class OndusPlatform implements DynamicPlatformPlugin {
       throw new Error(err);
     } 
 
-    // Instantiate Ondus session for handling web comms
+    // Instantiate Ondus session for handling HTTP communication with Ondus API
+    this.log.info('Initializing Ondus API session');
     this.ondusSession = new OndusSession(this.log, this.config);
-
     this.log.debug('Finished initializing platform:', this.config.name);
 
     // When this event is fired it means Homebridge has restored all cached accessories from disk.
@@ -93,9 +90,8 @@ export class OndusPlatform implements DynamicPlatformPlugin {
   }
 
   /**
-   * This is an example method showing how to register discovered accessories.
-   * Accessories must only be registered once, previously created accessories
-   * must not be registered again to prevent "duplicate UUID" errors.
+   * Discover and configure all Ondus appliances that have been 
+   * registered for this account. 
    */
   async discoverDevices() {
 
@@ -118,7 +114,6 @@ export class OndusPlatform implements DynamicPlatformPlugin {
       // No point in continuing if login() failed
       return;
     }
-    
     
     // Retrieve all locations
     await this.ondusSession.getLocations()

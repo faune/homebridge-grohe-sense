@@ -104,7 +104,7 @@ export abstract class OndusAppliance {
   }
 
   /**
-   * Retrieve appliance command like valve state as a JSON object
+   * Retrieve appliance command
    */
   public async getApplianceCommand() {
     return this.ondusPlatform.ondusSession.getApplianceCommand(
@@ -112,4 +112,20 @@ export abstract class OndusAppliance {
       this.getRoomID(),
       this.getApplianceID());
   }
+
+  /**
+   * Send new appliance command 
+   * 
+   * @param data JSON object containing new appliance configuration 
+   */
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  public async setApplianceCommand(data) {
+    return this.ondusPlatform.ondusSession.setApplianceCommand(
+      this.getLocationID(),
+      this.getRoomID(),
+      this.getApplianceID(),
+      data,
+    );
+  }
+
 }
