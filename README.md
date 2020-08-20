@@ -24,7 +24,7 @@ The following Grohe Sense components are supported:
 
 Released versions are published through npm and can be found here:
 
-https://www.npmjs.com/package/@faune/homebridge-plugin-ondus
+https://www.npmjs.com/package/@faune/homebridge-grohe-sense
 
 You can also search for this plugin from the awesome Homebridge web UI and it will automagically be installed/updated for your.
 
