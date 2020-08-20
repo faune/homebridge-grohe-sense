@@ -80,9 +80,11 @@ export class OndusSenseGuard extends OndusAppliance {
     // set the Valve service characteristics
     this.valveService
       .setCharacteristic(this.ondusPlatform.Characteristic.Name, accessory.context.device.name)
+      .setCharacteristic(this.ondusPlatform.Characteristic.Active, this.ondusPlatform.Characteristic.Active.INACTIVE)
+      .setCharacteristic(this.ondusPlatform.Characteristic.InUse, this.ondusPlatform.Characteristic.InUse.NOT_IN_USE)
       .setCharacteristic(this.ondusPlatform.Characteristic.ValveType, this.ondusPlatform.Characteristic.ValveType.GENERIC_VALVE)
       .setCharacteristic(this.ondusPlatform.Characteristic.StatusFault, this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
-
+      
     // register handlers for required characteristics of Valve service
     this.valveService.getCharacteristic(this.ondusPlatform.Characteristic.Active)
       .on('get', this.handleActiveGet.bind(this))
