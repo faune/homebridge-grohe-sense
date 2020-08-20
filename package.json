@@ -1,7 +1,7 @@
 {
   "displayName": "Ondus",
   "name": "homebridge-grohe-sense",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Homebridge plugin for Grohe Sense Guard, Sense Plus, and Sense water control system.",
   "license": "Apache-2.0",
   "repository": {
