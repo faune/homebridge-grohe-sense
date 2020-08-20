@@ -7,17 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.1.1] -
+## [1.2.X] - 
 
 ### Added
+
+### Changed
+
+## [Released]
+
+## [1.2.0] - 2020-08-20
+
+### Added
+
+- New plugin name
 
 ### Changed
 
 - Changed plugin name from homebridge-plugin-ondus to homebridge-grohe-sense
 - Changed the way plugin registers with homebridge in order to twart a warning message
 - Fixed wrong serial number in the accessory info
-
-## [Released]
+- Attempting to fix valve "Starting .." and "Waiting .." stuck responses in Home app by controlling both characteristics Active and InUse from the same context
 
 ## [1.1.0] - 2020-08-20
 

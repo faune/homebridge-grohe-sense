@@ -84,8 +84,8 @@ export class OndusSenseGuard extends OndusAppliance {
     // set the Valve service characteristics
     this.valveService
       .setCharacteristic(this.ondusPlatform.Characteristic.Name, accessory.context.device.name)
-      .setCharacteristic(this.ondusPlatform.Characteristic.Active, this.ondusPlatform.Characteristic.Active.INACTIVE)
-      .setCharacteristic(this.ondusPlatform.Characteristic.InUse, this.ondusPlatform.Characteristic.InUse.NOT_IN_USE)
+      .setCharacteristic(this.ondusPlatform.Characteristic.Active, this.ondusPlatform.Characteristic.Active.ACTIVE)
+      .setCharacteristic(this.ondusPlatform.Characteristic.InUse, this.ondusPlatform.Characteristic.InUse.IN_USE)
       .setCharacteristic(this.ondusPlatform.Characteristic.ValveType, this.ondusPlatform.Characteristic.ValveType.GENERIC_VALVE)
       .setCharacteristic(this.ondusPlatform.Characteristic.StatusFault, this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
       
@@ -94,8 +94,16 @@ export class OndusSenseGuard extends OndusAppliance {
       .on('get', this.handleActiveGet.bind(this))
       .on('set', this.handleActiveSet.bind(this));
 
-    this.valveService.getCharacteristic(this.ondusPlatform.Characteristic.InUse)
-      .on('get', this.handleInUseGet.bind(this));
+    /**
+      * A short summary for Active / InUse - Logic:
+      * Active=0, InUse=0 -> Off
+      * Active=1, InUse=0 -> Waiting [Starting, Activated but no water flowing (yet)]
+      * Active=1, InUse=1 -> Running
+      * Active=0, InUse=1 -> Stopping
+      */    
+    // I am not sure if this is even needed when Active and InUse are controlled together
+    //this.valveService.getCharacteristic(this.ondusPlatform.Characteristic.InUse)
+    //  .on('get', this.handleInUseGet.bind(this));
 
   }
 
@@ -262,10 +270,14 @@ export class OndusSenseGuard extends OndusAppliance {
             this.ondusPlatform.log.debug(`[${this.logPrefix}] Main water inlet valve is open`);
             this.valveService.updateCharacteristic(this.ondusPlatform.Characteristic.Active, 
               this.ondusPlatform.Characteristic.Active.ACTIVE);
+            this.valveService.updateCharacteristic(this.ondusPlatform.Characteristic.InUse, 
+              this.ondusPlatform.Characteristic.InUse.IN_USE);
           } else {
             this.ondusPlatform.log.debug(`[${this.logPrefix}] Main water inlet valve is closed`);
             this.valveService.updateCharacteristic(this.ondusPlatform.Characteristic.Active, 
               this.ondusPlatform.Characteristic.Active.INACTIVE);
+            this.valveService.updateCharacteristic(this.ondusPlatform.Characteristic.InUse, 
+              this.ondusPlatform.Characteristic.InUse.NOT_IN_USE);
           }
 
           // Reset StatusFault characteristics for valve service
@@ -301,8 +313,12 @@ export class OndusSenseGuard extends OndusAppliance {
     // Log input
     if (valveState === OndusSenseGuard.VALVE_OPEN) {
       this.ondusPlatform.log.warn(`[${this.logPrefix}] Opening main water inlet valve`);
+      this.valveService.updateCharacteristic(this.ondusPlatform.Characteristic.Active, 
+        this.ondusPlatform.Characteristic.Active.ACTIVE);
     } else {
       this.ondusPlatform.log.warn(`[${this.logPrefix}] Closing main water inlet valve`);
+      this.valveService.updateCharacteristic(this.ondusPlatform.Characteristic.Active, 
+        this.ondusPlatform.Characteristic.Active.INACTIVE);
     }
 
     // Construct payload for controlling valve state
@@ -319,13 +335,13 @@ export class OndusSenseGuard extends OndusAppliance {
           if (this.currentValveState) {
             this.ondusPlatform.log.warn(`[${this.logPrefix}] Main water inlet valve has been opened`);
             this.currentValveState = OndusSenseGuard.VALVE_OPEN;
-            this.valveService.updateCharacteristic(this.ondusPlatform.Characteristic.Active, 
-              this.ondusPlatform.Characteristic.Active.ACTIVE);
+            this.valveService.updateCharacteristic(this.ondusPlatform.Characteristic.InUse, 
+              this.ondusPlatform.Characteristic.InUse.IN_USE);
           } else {
             this.ondusPlatform.log.warn(`[${this.logPrefix}] Main water inlet valve has been closed`);
             this.currentValveState = OndusSenseGuard.VALVE_CLOSED;
-            this.valveService.updateCharacteristic(this.ondusPlatform.Characteristic.Active, 
-              this.ondusPlatform.Characteristic.Active.INACTIVE);
+            this.valveService.updateCharacteristic(this.ondusPlatform.Characteristic.InUse, 
+              this.ondusPlatform.Characteristic.InUse.NOT_IN_USE);
           }
 
           // Reset StatusFault characteristics for valve service
