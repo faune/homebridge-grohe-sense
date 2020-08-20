@@ -29,11 +29,11 @@ export class OndusSenseGuard extends OndusAppliance {
    */
   constructor(
     public ondusPlatform: OndusPlatform,
-    public accessory: PlatformAccessory,
     public locationID: number,
     public roomID: number,
+    public accessory: PlatformAccessory,
   ) {
-    super(ondusPlatform, accessory, locationID, roomID);
+    super(ondusPlatform, locationID, roomID, accessory);
 
     // Placeholders for sensor data
     this.currentTemperature = 0;
@@ -211,10 +211,12 @@ export class OndusSenseGuard extends OndusAppliance {
           this.currentFlowRate = lastMeasurement.flowrate;
           this.currentPressure = lastMeasurement.pressure;
           this.currentTemperature = lastMeasurement.temperature_guard;
-          this.ondusPlatform.log.info(`[${this.logPrefix}] Last measured timestamp: ${this.currentTimestamp}`);
-          this.ondusPlatform.log.info(`[${this.logPrefix}] Last measured flowrate level: ${this.currentFlowRate}`);
-          this.ondusPlatform.log.info(`[${this.logPrefix}] Last measured pressure level: ${this.currentPressure}`);
-          this.ondusPlatform.log.info(`[${this.logPrefix}] Last measured temperature level: ${this.currentTemperature}`);
+          const valveState = this.currentValveState === OndusSenseGuard.VALVE_OPEN? 'Open': 'Closed';
+          this.ondusPlatform.log.info(`[${this.logPrefix}] Timestamp: ${this.currentTimestamp}`);          
+          this.ondusPlatform.log.info(`[${this.logPrefix}] - Valve: ${valveState}`);
+          this.ondusPlatform.log.info(`[${this.logPrefix}] - Flowrate: ${this.currentFlowRate}`);
+          this.ondusPlatform.log.info(`[${this.logPrefix}] - Pressure: ${this.currentPressure} bar`);
+          this.ondusPlatform.log.info(`[${this.logPrefix}] - Temperature: ${this.currentTemperature}˚C`);
 
           // Reset StatusFault characteristics for temperature service
           this.temperatureService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 

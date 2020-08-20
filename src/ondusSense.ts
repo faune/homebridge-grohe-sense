@@ -1,7 +1,7 @@
-import { Service, PlatformAccessory } from 'homebridge';
-
-import { OndusPlatform } from './ondusPlatform';
+import { PlatformAccessory, Service } from 'homebridge';
 import { OndusAppliance } from './ondusAppliance';
+import { OndusPlatform } from './ondusPlatform';
+
 
 /**
  * Platform Accessory
@@ -28,12 +28,12 @@ export class OndusSense extends OndusAppliance {
    */
   constructor(
     public ondusPlatform: OndusPlatform,
-    public accessory: PlatformAccessory,
     public locationID: number,
     public roomID: number,
+    public accessory: PlatformAccessory,
   ) {
     // Call parent constructor
-    super(ondusPlatform, accessory, locationID, roomID);
+    super(ondusPlatform, locationID, roomID, accessory);
 
     // Placeholders for sensor data
     this.currentTemperature = 0;
@@ -138,13 +138,11 @@ export class OndusSense extends OndusAppliance {
 
     // Fetch initial sensor data from Ondus API on startup
     this.getMeasurements();
-    if (this instanceof OndusSense) { 
-      this.getStatus();
-    }
+    this.getStatus();
     
     // Start timer for fetching updated values from Ondus API once every refresh_interval from now on
     // The reason is that sensors only report new data once every day, so no point in querying Ondus API often
-    let refreshInterval = this.ondusPlatform.config['refresh_interval'] * 10000;
+    let refreshInterval = this.ondusPlatform.config['refresh_interval'] * 1000;
     if (!refreshInterval) {
       // eslint-disable-next-line max-len
       this.ondusPlatform.log.warn(`[${this.logPrefix}] Refresh interval incorrectly configured in config.json - using default value of 3600 seconds`);
@@ -239,9 +237,9 @@ export class OndusSense extends OndusAppliance {
         this.currentTimestamp = lastMeasurement.timestamp;
         this.currentTemperature = lastMeasurement.temperature;
         this.currentHumidity = lastMeasurement.humidity;
-        this.ondusPlatform.log.info(`[${this.logPrefix}] Last measured timestamp: ${this.currentTimestamp}`);
-        this.ondusPlatform.log.info(`[${this.logPrefix}] Last measured temperature level: ${this.currentTemperature}`);
-        this.ondusPlatform.log.info(`[${this.logPrefix}] Last measured humidity level: ${this.currentHumidity}%`);
+        this.ondusPlatform.log.info(`[${this.logPrefix}] Timestamp: ${this.currentTimestamp}`);
+        this.ondusPlatform.log.info(`[${this.logPrefix}] - Temperature: ${this.currentTemperature}˚C`);
+        this.ondusPlatform.log.info(`[${this.logPrefix}] - Humidity: ${this.currentHumidity}% RF`);
 
         // Reset StatusFault characteristics temperature and humidity service
         [this.temperatureService, this.humidityService].forEach( service => {
@@ -264,7 +262,14 @@ export class OndusSense extends OndusAppliance {
    * Fetch Ondus Sense battery data from the Ondus API.
    */
   getStatus() {
-    this.ondusPlatform.log.debug(`[${this.logPrefix}] Updating battery, WiFi quality, and connectivity status`);
+
+    if (!(this instanceof OndusSense)) {
+      // Mains powered Sense Plus does not have a battery service, 
+      // so we silently return if this instance is not OndusSense    
+      return;
+    }
+
+    this.ondusPlatform.log.debug(`[${this.logPrefix}] Updating battery, WiFi quality, and connection status`);
 
     // Retrieve appliance status for this instance
     this.getApplianceStatus()
@@ -282,9 +287,9 @@ export class OndusSense extends OndusAppliance {
           }
         });
       
-        this.ondusPlatform.log.info(`[${this.logPrefix}] Last measured battery level: ${this.currentBatteryLevel}%`);
-        this.ondusPlatform.log.info(`[${this.logPrefix}] Last measured WiFi quality: ${this.currentWiFiQuality}`);
-        this.ondusPlatform.log.info(`[${this.logPrefix}] Last measured connection state: ${this.currentConnection}`);
+        this.ondusPlatform.log.info(`[${this.logPrefix}] - Battery: ${this.currentBatteryLevel}%`);
+        this.ondusPlatform.log.info(`[${this.logPrefix}] - WiFi quality: ${this.currentWiFiQuality}`);
+        this.ondusPlatform.log.info(`[${this.logPrefix}] - Connection: ${this.currentConnection}`);
 
         // Reset StatusFault characteristics for battery service
         if (this.batteryService) {
@@ -293,7 +298,7 @@ export class OndusSense extends OndusAppliance {
         }
       })
       .catch(err => {
-        this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to update battery level: ${err.text}`);
+        this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to update device status: ${err.text}`);
         
         // Set StatusFault characteristics for battery service
         if (this.batteryService) {

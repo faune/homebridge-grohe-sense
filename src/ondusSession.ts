@@ -7,9 +7,9 @@ export class OndusSession {
   log: Logger;
   config: PlatformConfig;
   refreshToken = '';
-  refreshTokenExpireIn = 0;
+  refreshTokenExpireIn = 15552000; // Default 180 days
   accessToken = '';
-  accessTokenExpireIn = 0;
+  accessTokenExpireIn = 3600; // Default 1 hour
   username = '';
   password = '';
   sessionCookie = '';
@@ -30,7 +30,7 @@ export class OndusSession {
     this.config = config;
     this.loggedIn = false;
 
-    if (config['refresh_token']) {
+    if (config['refresh_token'] && (config['refresh_token'] !== '<Paste refresh token here>')) {
       this.log.debug('refreshToken: ', config['refresh_token']);
       this.refreshToken = config['refresh_token'];
     }
@@ -71,7 +71,7 @@ export class OndusSession {
         });
     } else {
       // Refresh access token using existing refresh token from config.json
-      this.refreshAccessToken()
+      await this.refreshAccessToken()
         .then( response => {
           this.log.debug(`Function refreshAccessToken() successfull: HTTP_STATUS_CODE=${response.status}`);
           this.loggedIn = true;
@@ -79,15 +79,15 @@ export class OndusSession {
     }
 
     // Make sure we refresh the access token once it expires
-    setInterval( () => { 
+    this.log.info(`Scheduling access token refresh in ${this.accessTokenExpireIn} seconds`);
+    setInterval( async () => { 
       this.log.info('Access token has expired - refreshing ...');
-      this.refreshAccessToken()
+      await this.refreshAccessToken()
         .then( () => {
-          this.log.info(`Access token successfully refreshed - next refresh will happen in ${this.accessTokenExpireIn*1000} seconds`);
           this.loggedIn = true;
         })
         .catch( err => {
-          this.log.error(`Unable to refresh access token after ${this.accessTokenExpireIn*1000} seconds: ${err}`);
+          this.log.error(`Unable to refresh access token after ${this.accessTokenExpireIn} seconds: ${err}`);
           this.loggedIn = false;
         });
     }, this.accessTokenExpireIn * 1000);
@@ -177,6 +177,7 @@ export class OndusSession {
               this.accessTokenExpireIn = res.body.expires_in;
               this.refreshToken = res.body.refresh_token;
               this.refreshTokenExpireIn = res.body.refresh_expires_in;
+              this.log.info(`OAuth access token successfully retrieved - token will expire in ${this.accessTokenExpireIn} seconds`);
               resolve(res);
             
               // Other unused header fields:
@@ -219,14 +220,16 @@ export class OndusSession {
             this.log.error('Unexpected server response: ', err.response);
             reject(err);
           } else {
-            if (!res.body['access_token']) {
+            //this.log.debug(res.body);
+            if (res.body.access_token && res.body.expires_in) {
+              this.accessToken = res.body.access_token;
+              this.accessTokenExpireIn = res.body.expires_in;
+              this.log.info(`OAuth access token successfully refreshed - token will expire in ${this.accessTokenExpireIn} seconds`);
+              resolve(res);
+            } else {
               const errMsg = `Unable to refresh OAuth access token: ${res}`;
               this.log.error(errMsg);
-              reject(errMsg);
-            } else {
-              this.log.debug('OAuth access token successfully refreshed');
-              this.accessToken = res.body['access_token'];
-              resolve(res);
+              reject(errMsg);              
             }
           }
         });

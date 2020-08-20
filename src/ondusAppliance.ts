@@ -21,9 +21,9 @@ export abstract class OndusAppliance {
    */
   constructor(
     public ondusPlatform: OndusPlatform,
-    public accessory: PlatformAccessory,
     public locationID: number,
     public roomID: number,
+    public accessory: PlatformAccessory,
   ) {
     this.logPrefix = accessory.context.device.name;
     this.applianceID = accessory.context.device.appliance_id;

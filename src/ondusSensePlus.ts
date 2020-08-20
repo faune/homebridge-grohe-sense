@@ -19,11 +19,11 @@ export class OndusSensePlus extends OndusSense {
    */
   constructor(
     public ondusPlatform: OndusPlatform,
-    public accessory: PlatformAccessory,
     public locationID: number,
     public roomID: number,
+    public accessory: PlatformAccessory,
   ) {
-    super(ondusPlatform, accessory, locationID, roomID);
+    super(ondusPlatform, locationID, roomID, accessory);
   }
 
 }

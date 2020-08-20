@@ -186,15 +186,15 @@ export class OndusPlatform implements DynamicPlatformPlugin {
     switch(applianceInfo.type) {
       case OndusSense.ONDUS_TYPE:
         this.log.info(`Opening device handler "${OndusSense.ONDUS_NAME}" for "${applianceInfo.name}"`);
-        new OndusSense(this, accessory, locationID, roomID);
+        new OndusSense(this, locationID, roomID, accessory);
         break;
       case OndusSensePlus.ONDUS_TYPE:
         this.log.info(`Opening device handler "${OndusSensePlus.ONDUS_NAME}" for "${applianceInfo.name}"`);
-        new OndusSensePlus(this, accessory, locationID, roomID);
+        new OndusSensePlus(this, locationID, roomID, accessory);
         break;
       case OndusSenseGuard.ONDUS_TYPE:
         this.log.info(`Opening device handler "${OndusSenseGuard.ONDUS_NAME}" for "${applianceInfo.name}"`);
-        new OndusSenseGuard(this, accessory, locationID, roomID);
+        new OndusSenseGuard(this, locationID, roomID, accessory);
         break;
       default:
         this.log.warn(`Unsupported Ondus appliance type encountered: ${applianceInfo.type} - ignoring`);
