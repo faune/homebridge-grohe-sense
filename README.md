@@ -137,8 +137,8 @@ This value is the `refresh token` you should save as described above.
 
 ## Testing unreleased versions on your homebridge setup
 
-1. git clone https://github.com/faune/homebridge-plugin-ondus
-2. cd homebridge-plugin-ondus
+1. git clone https://github.com/faune/homebridge-grohe-sense
+2. cd homebridge-grohe-sense
 3. npm install
 4. npm run build
 5. npm link
