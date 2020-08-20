@@ -6,7 +6,7 @@
 </p>
 
 
-# Homebridge Ondus plugin
+# Homebridge Grohe Sense plugin
 
 Homebridge plugin for controlling some of the aspects of [Grohe Sense water security system](https://www.grohe.co.uk/en_gb/smarthome/grohe-sense-water-security-system/) system using HomeKit.
 
