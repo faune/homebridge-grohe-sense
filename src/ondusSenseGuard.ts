@@ -3,6 +3,10 @@ import { Service, PlatformAccessory } from 'homebridge';
 import { OndusPlatform } from './ondusPlatform';
 import { OndusAppliance } from './ondusAppliance';
 
+
+
+
+
 /**
  * Platform Accessory
  * An instance of this class is created for each accessory your platform registers
@@ -47,7 +51,7 @@ export class OndusSenseGuard extends OndusAppliance {
       .setCharacteristic(this.ondusPlatform.Characteristic.Manufacturer, OndusSenseGuard.ONDUS_PROD)
       .setCharacteristic(this.ondusPlatform.Characteristic.Model, OndusSenseGuard.ONDUS_NAME)
       .setCharacteristic(this.ondusPlatform.Characteristic.HardwareRevision, accessory.context.device.type)
-      .setCharacteristic(this.ondusPlatform.Characteristic.SerialNumber, accessory.context.device.serial_number)
+      .setCharacteristic(this.ondusPlatform.Characteristic.SerialNumber, this.unhexlify(accessory.context.device.serial_number))
       .setCharacteristic(this.ondusPlatform.Characteristic.FirmwareRevision, accessory.context.device.version)
       .setCharacteristic(this.ondusPlatform.Characteristic.AppMatchingIdentifier, '1451814256');
 

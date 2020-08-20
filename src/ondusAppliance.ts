@@ -3,6 +3,7 @@ import { PlatformAccessory } from 'homebridge';
 import { OndusPlatform } from './ondusPlatform';
 
 
+
 /**
  * Platform Accessory
  * An instance of this class is created for each accessory your platform registers
@@ -39,6 +40,17 @@ export abstract class OndusAppliance {
 
   public getApplianceID() {
     return this.applianceID;
+  }
+
+  /**
+   * Utility functions
+   */
+  public unhexlify(str: string) {
+    let result = '';
+    for (let i=0, l=str.length; i<l; i+=2) {
+      result += String.fromCharCode(parseInt(str.substr(i, 2), 16));
+    }
+    return result;
   }
 
   /**
