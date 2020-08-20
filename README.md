@@ -1,8 +1,12 @@
 
 <p align="center">
 
-<img src="https://github.com/homebridge/branding/raw/master/logos/homebridge-wordmark-logo-vertical.png" width="150">
+<img src="https://github.com/homebridge/branding/raw/master/logos/homebridge-wordmark-logo-vertical.png" width="150"> 
+</p>
+<p align="center">
 
+<img src="https://cdn.cloud.grohe.com/Web/4_3/ZZH_T22500C05_000_01_4_3/4_3/710/ZZH_T22500C05_000_01_4_3_4_3.jpg" width="150">
+<img src="https://cdn.cloud.grohe.com/Web/4_3/ZZH_T22505D55_000_01_4_3/4_3/710/ZZH_T22505D55_000_01_4_3_4_3.jpg" width="150">
 </p>
 
 
