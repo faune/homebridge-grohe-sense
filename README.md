@@ -24,7 +24,7 @@ https://www.npmjs.com/package/@faune/homebridge-plugin-ondus
 
 You can also search for this plugin from the awesome Homebridge web UI and it will automagically be installed/updated for your.
 
-## Configuration section in config.json
+## Configuration section in `config.json`
 
 There is a Settings screen during plugin setup that helps you configure the configuration section shown below. 
 
@@ -44,7 +44,7 @@ Note that for both `refresh_token` and `username/password` you must remove `< >`
 
 You do NOT need to provide the `refresh_token` if you provide your `username/password`. Some/many are more comfortable using a `refresh_token` than the actual `username/password` credentials themselves in a config file. 
 
-### `refresh_interval``
+### `refresh_interval`
 How often to query Ondus API for new data. Default setting of `3600` seconds is more than sufficient, because sensors only report data every 24 hours unless a notification threshold has been exceeded.
 
 ### `valve_control`
