@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Changed plugin name from homebridge-plugin-ondus to homebridge-grohe-sense
+- Changed the way plugin registers with homebridge in order to twart a warning message
+- Fixed wrong serial number in the accessory info
+
 ## [Released]
 
 ## [1.1.0] - 2020-08-20
