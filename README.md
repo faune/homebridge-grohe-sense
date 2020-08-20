@@ -8,77 +8,86 @@
 
 # Homebridge Ondus plugin
 
-This is my first attempt at:
+Homebridge plugin for controlling some of the aspects of [Grohe Sense water security system](https://www.grohe.co.uk/en_gb/smarthome/grohe-sense-water-security-system/) system using HomeKit.
 
-1. Typescript / Javascript
-2. Homebridge plugin
+The following Grohe Sense components are supported:
 
-You have been warned :-)
+  * Sense Guard main water inlet valve
+  * Sense battery powered water leakage detector
+  * Sense Plus mains powered water leakage detector
 
-## Why did I do this
+## Download
 
-If you really want to know this, lets take a stroll down memory lane:
+Released versions are published through npm and can be found here:
 
-1. <https://homebridge.io> is AWESOME! Props to everyone who contributed
-2. I couldnt find a Ondus Sense plugin for homebridge :-(
-3. I configured OpenHab with FlorianSW <https://github.com/openhab/openhab-addons/blob/2.5.x/bundles/org.openhab.binding.groheondus/>
-4. I made Homebridge talk to OpenHab
-5. 4 kinda worked, but data were never refreshed
-6. Concluded OpenHab sucks (just kidding)
-7. Started looking at https://developers.homebridge.io and wondered how hard can it be?
-8. Looked at [FlorianSW](https://github.com/FlorianSW/grohe-ondus-api-java) java code alot for figuring out the Ondus web API
-9. Spent 3 days trying to understand how 3 gazillion Node.js HTTP frameworks worked, and they all suck (just kidding.. well, not really) I mean... wtf... Seriosly, what is wrong with you guys??
-10. Found https://github.com/visionmedia/superagent which was supercool
-11. Attempted to get OpenHab working again, and it still sucks - especially when I dont want it to consume my life
-12. Found homebridge example plugin
-13. Got example up and running
-14. Played around using TypeScript. Do I like it? Its growing - still wish it was Python, because I have trouble expressing everything I want
-15. Found more help on Ondus API from <https://github.com/gkreitz/homeassistant-grohe_sense> - cool shit and written in a proper language :-)
-16. Managed to piece together something bridging the example plugin framework with my superagent code from 10 worthy of showing the world
-17. Had lots of fun learning new shit
-18. Currently waiting for contributions or law suite from Grohe
+https://www.npmjs.com/package/@faune/homebridge-plugin-ondus
 
+You can also search for this plugin from the awesome Homebridge web UI and it will automagically be installed/updated for your.
+
+## Configuration section in config.json
+
+There is a Settings screen during plugin setup that helps you configure the configuration section shown below. 
+
+````
+{
+  "name": "Ondus",
+  "refresh_token": "<Paste refresh token here>",
+  "username": "<user@name.domain>",
+  "password": "<secret>",
+  "refresh_interval": 3600,
+  "valve_control": true,
+  "platform": "Ondus"
+}
+````
+### `refresh_token` and `username/password`
+Note that for both `refresh_token` and `username/password` you must remove `< >` above when inserting your credentials. 
+
+You do NOT need to provide the `refresh_token` if you provide your `username/password`. Some/many are more comfortable using a `refresh_token` than the actual `username/password` credentials themselves in a config file. 
+
+### `refresh_interval``
+How often to query Ondus API for new data. Default setting of `3600` seconds is more than sufficient, because sensors only report data every 24 hours unless a notification threshold has been exceeded.
+
+### `valve_control`
+If you have kids like me with iCloud family sharing enabled, and dont want them brats (just kidding, mine are actually angels) to turn off the main water supply through HomeKit as a prank when you are showering - this is for you! Set `valve_control` to `false`, and the plugin will ignore all valve control requests :-)
 
 
 ## What is supported
 
-Plugin will automatically find your Ondus devices, and expose the following HomeKit services:
+Plugin will automatically find and configure your Sense devices, and expose the following HomeKit services:
 
- * Ondus Sense guard
-   - Temperature
+ * Sense Guard
+   - Valve on/off
    - Valve state
- * Ondus Sense
+   - Temperature
+   - Water pressure (log only)
+   - Water flowrate (log only)
+ * Sense
    - Temperature
    - Humidity
- * Ondus Sense Plus (untested, as I dont have one)
+   - Battery
+ * Sense Plus (untested, as I dont have one)
    - Temperature
    - Humidity
 
 
 ## What is not supported
 
-* Acquiring refresh token with username/password. I will probably get around to do this soonish.
-* Controlling the Guard valve state
-* Displaying water pressure and flow metrics
+* The system collects a lot of interesting information that unfortunately have no suitable characteristics counterpart defined in the official Apple HAP. This include (but not limited to) for example :
+  - water pressure
+  - flow metrics
+  - water consumption
+  - statistics
+  - notifications
+
 
 ## What I would like to see in the future
  
 * Proper OAuth library handling authentication
-* I have no idea where/how to handle exceptions and errors, so this is probably FUBAR right now. Help anyone?
 * Eve history would be awesome using Fakegato
-* Displaying water pressure and flow metrics, but I have no idea what characteristics to use in Homebridge for this...
-* Control Guard valve. This is pretty simple to add, but so far I dont have a use-case for it and my kids have access to my HomeKit config as well, so ...
+* Displaying water pressure, flow metrics +++, but I have no idea what characteristics to use in Homebridge for this...
 
-## Configuration section in config.json
 
-````
-{
-  "name": "Ondus",
-  "refresh_token": "<Paste your refresh token here>"
-  "refresh_interval": 3600,
-  "platform": "Ondus"
-}
-````
+
 
 ## Obtaining a `refresh token`
 
@@ -122,13 +131,36 @@ Then the `refresh_token` value you should copy would be: `the_refresh_token`.
 This value is the `refresh token` you should save as described above.
 
 
-## Testing on your homebridge setup
+## Testing unreleased versions on your homebridge setup
 
 1. git clone https://github.com/faune/homebridge-plugin-ondus
 2. cd homebridge-plugin-ondus
 3. npm install
 4. npm run build
 5. npm link
-6. homebridge -D
+6. homebridge -I -D
 
+
+## Why did I do this
+
+If you really want to know this, lets take a stroll down memory lane:
+
+1. <https://homebridge.io> is AWESOME! Props to everyone who contributed
+2. I couldnt find a Ondus Sense plugin for homebridge :-(
+3. I configured OpenHab with FlorianSW <https://github.com/openhab/openhab-addons/blob/2.5.x/bundles/org.openhab.binding.groheondus/>
+4. I made Homebridge talk to OpenHab
+5. 4 kinda worked, but data were never refreshed
+6. Concluded OpenHab sucks (just kidding)
+7. Started looking at https://developers.homebridge.io and wondered how hard can it be?
+8. Looked at [FlorianSW](https://github.com/FlorianSW/grohe-ondus-api-java) java code alot for figuring out the Ondus web API
+9. Spent 3 days trying to understand how 3 gazillion Node.js HTTP frameworks worked, and they all suck (just kidding.. well, not really) I mean... wtf... Seriosly, what is wrong with you guys??
+10. Found https://github.com/visionmedia/superagent which was supercool
+11. Attempted to get OpenHab working again, and it still sucks - especially when I dont want it to consume my life
+12. Found homebridge example plugin
+13. Got example up and running
+14. Played around using TypeScript. Do I like it? Its growing - still wish it was Python, because I have trouble expressing everything I want
+15. Found more help on Ondus API from <https://github.com/gkreitz/homeassistant-grohe_sense> - cool shit and written in a proper language :-)
+16. Managed to piece together something bridging the example plugin framework with my superagent code from 10 worthy of showing the world
+17. Had lots of fun learning new shit
+18. Currently waiting for contributions or law suite from Grohe
 
