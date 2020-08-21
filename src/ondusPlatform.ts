@@ -9,8 +9,7 @@ import { OndusSenseGuard } from './ondusSenseGuard';
 // Ondus HTTP library
 import { OndusSession } from './ondusSession';
 
-/* TODO: When implementing notification support
-// The protocol returns notification information as a {category: type}
+// The Ondus API returns notification information as a {category: type}
 export interface IHash {
   [details: string] : string;
 } 
@@ -35,7 +34,7 @@ NOTIFICATION_TYPES['(30,310'] = 'Pipe break';
 NOTIFICATION_TYPES['(30,400'] = 'Maximum volume reached';
 NOTIFICATION_TYPES['(30,430'] = 'Sense detected water (water shut off)';
 NOTIFICATION_TYPES['(30,431)'] = 'Sense detected water (water not shut off)';
-*/
+
 
 /**
  * Ondus Platform constructor
