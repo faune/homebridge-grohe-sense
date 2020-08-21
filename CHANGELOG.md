@@ -7,13 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.2.X] - 
+## [1.X.X] -
 
 ### Added
 
 ### Changed
 
 ## [Released]
+
+## [1.2.1] - 2020-08-21 
+
+### Added
+
+- Homebridge verified
+
+### Changed
+
+- Readme and Changelog updated to reflect the plugin has been Homebridge verified
+
 
 ## [1.2.0] - 2020-08-20
 
