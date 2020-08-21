@@ -217,7 +217,7 @@ export class OndusSession {
         .send({'refresh_token': this.refreshToken})
         .end((err, res) => {
           if (err) {
-            this.log.error('Unexpected server response: ', err.response);
+            this.log.error(`refreshAccessToken(): Unexpected server response: ${err}`);
             reject(err);
           } else {
             //this.log.debug(res.body);
@@ -257,7 +257,7 @@ export class OndusSession {
         .set('accept', 'json')
         .end((err, res) => {
           if (err) {
-            const errMsg = `getURL(): Unexpected server response: ${err.response}`;
+            const errMsg = `getURL(): Unexpected server response: ${err}`;
             reject(errMsg);
           } else {
             resolve(res);
