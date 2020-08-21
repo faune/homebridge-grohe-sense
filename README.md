@@ -12,6 +12,8 @@
 
 # Homebridge Grohe Sense plugin
 
+[![verified-by-homebridge](https://badgen.net/badge/homebridge/verified/purple)](https://github.com/homebridge/homebridge/wiki/Verified-Plugins)
+
 Homebridge plugin for controlling some of the aspects of [Grohe Sense water security system](https://www.grohe.co.uk/en_gb/smarthome/grohe-sense-water-security-system/) using HomeKit.
 
 The following Grohe Sense components are supported:
