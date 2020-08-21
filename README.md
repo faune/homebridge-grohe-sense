@@ -1,14 +1,20 @@
 
 <p align="center">
 
-<img src="https://github.com/homebridge/branding/raw/master/logos/homebridge-wordmark-logo-vertical.png" width="150">
+<img src="https://github.com/homebridge/branding/raw/master/logos/homebridge-wordmark-logo-vertical.png" width="150"> 
+</p>
+<p align="center">
 
+<img src="https://cdn.cloud.grohe.com/Web/4_3/ZZH_T22500C05_000_01_4_3/4_3/710/ZZH_T22500C05_000_01_4_3_4_3.jpg" width="150">
+<img src="https://cdn.cloud.grohe.com/Web/4_3/ZZH_T22505D55_000_01_4_3/4_3/710/ZZH_T22505D55_000_01_4_3_4_3.jpg" width="150">
 </p>
 
 
 # Homebridge Grohe Sense plugin
 
-Homebridge plugin for controlling some of the aspects of [Grohe Sense water security system](https://www.grohe.co.uk/en_gb/smarthome/grohe-sense-water-security-system/) system using HomeKit.
+[![verified-by-homebridge](https://badgen.net/badge/homebridge/verified/purple)](https://github.com/homebridge/homebridge/wiki/Verified-Plugins)
+
+Homebridge plugin for controlling some of the aspects of [Grohe Sense water security system](https://www.grohe.co.uk/en_gb/smarthome/grohe-sense-water-security-system/) using HomeKit.
 
 The following Grohe Sense components are supported:
 
@@ -20,7 +26,7 @@ The following Grohe Sense components are supported:
 
 Released versions are published through npm and can be found here:
 
-https://www.npmjs.com/package/@faune/homebridge-plugin-ondus
+https://www.npmjs.com/package/homebridge-grohe-sense
 
 You can also search for this plugin from the awesome Homebridge web UI and it will automagically be installed/updated for your.
 
@@ -133,8 +139,8 @@ This value is the `refresh token` you should save as described above.
 
 ## Testing unreleased versions on your homebridge setup
 
-1. git clone https://github.com/faune/homebridge-plugin-ondus
-2. cd homebridge-plugin-ondus
+1. git clone https://github.com/faune/homebridge-grohe-sense
+2. cd homebridge-grohe-sense
 3. npm install
 4. npm run build
 5. npm link
