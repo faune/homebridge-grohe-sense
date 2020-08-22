@@ -1,7 +1,8 @@
 import { PlatformAccessory, Service } from 'homebridge';
 
-import { OndusPlatform, NOTIFICATION_TYPES } from './ondusPlatform';
+import { OndusPlatform } from './ondusPlatform';
 import { OndusThresholds } from './ondusThresholds';
+import { OndusNotification, NOTIFICATION_CATEGORY_CRITICAL, NOTIFICATION_CATEGORY_WARNING} from './ondusNotification';
 
 
 /**
@@ -27,8 +28,9 @@ export abstract class OndusAppliance {
   leakDetected: boolean;
   thresholds: OndusThresholds;
 
+  
   /**
-   * Ondus Sense virtual class
+   * Ondus Sense abstract class
    */
   constructor(
     public ondusPlatform: OndusPlatform,
@@ -47,6 +49,7 @@ export abstract class OndusAppliance {
 
     // Update configured threshold limits
     this.thresholds.update();
+
 
     // Initialize common sensor services
 
@@ -144,15 +147,15 @@ export abstract class OndusAppliance {
 
         // Iterate over all notifications for this accessory
         res.body.forEach(element => {
-          if (element.category === 30) {
-            // Check if notifications contained one or more category 30 messages.
+          if (element.category === NOTIFICATION_CATEGORY_WARNING ) {
+            // Check if notifications contained one or more category critical messages.
             // If this is the case a leakage has been detected
             this.leakDetected = true;
           }
           // Log each notification message regardless of category. These messages will be 
           // encountered and logged until they are marked as read in the Ondus mobile app
-          const notification = NOTIFICATION_TYPES[`(${element.category},${element.type})`];
-          this.ondusPlatform.log.warn(`[${this.logPrefix}] ${notification} reported ${element.timestamp}`);
+          const notification = new OndusNotification(element.category, element.type, element.timestamp, this).getNotification();
+          this.ondusPlatform.log.warn(`[${this.logPrefix}] ${notification}`);
         });
 
         // Update the leakService LeakDetected characteristics
@@ -171,6 +174,7 @@ export abstract class OndusAppliance {
 
       })
       .catch( err => {
+        this.ondusPlatform.log.debug(err);
         this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to process notifications: ${err}`);
         
         // Set StatusFault characteristics for leakage service

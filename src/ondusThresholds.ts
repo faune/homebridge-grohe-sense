@@ -1,5 +1,5 @@
 import { PlatformAccessory, Logger } from 'homebridge';
-
+    
 
 export class OndusThresholds {
 
@@ -180,5 +180,5 @@ export class OndusThresholds {
   getLowPressureLimit() {
     return this.lowPressureLimit; 
   }
-  
+
 }

@@ -96,22 +96,6 @@ export class OndusSense extends OndusAppliance {
         .on('get', this.handleBatteryLevelGet.bind(this));
       this.batteryService.getCharacteristic(this.ondusPlatform.Characteristic.StatusLowBattery)
         .on('get', this.handleStatusLowBatteryGet.bind(this));
-
-      
-      // NOTE:
-      // It is possible to not add a separate battery service, but instead add these characteristics
-      // to the temperature and humidity service directly. But according to interface defined on 
-      // https://developers.homebridge.io these characteristics are not supported for those service types.
-      /*
-      this.temperatureService.getCharacteristic(this.ondusPlatform.Characteristic.BatteryLevel)
-        .on('get', this.handleBatteryLevelGet.bind(this));
-      this.temperatureService.getCharacteristic(this.ondusPlatform.Characteristic.StatusLowBattery)
-        .on('get', this.handleStatusLowBatteryGet.bind(this));
-      this.humidityService.getCharacteristic(this.ondusPlatform.Characteristic.BatteryLevel)
-        .on('get', this.handleBatteryLevelGet.bind(this));
-      this.humidityService.getCharacteristic(this.ondusPlatform.Characteristic.StatusLowBattery)
-        .on('get', this.handleStatusLowBatteryGet.bind(this));
-      */
     }
 
 

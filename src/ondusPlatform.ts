@@ -9,32 +9,6 @@ import { OndusSenseGuard } from './ondusSenseGuard';
 // Ondus HTTP library
 import { OndusSession } from './ondusSession';
 
-// The Ondus API returns notification information as a {category: type}
-export interface IHash {
-  [details: string] : string;
-}
-export const NOTIFICATION_TYPES: IHash = {};
-NOTIFICATION_TYPES['(10,60)'] = 'Firmware update available';
-NOTIFICATION_TYPES['(10,460)'] = 'Firmware update available';
-NOTIFICATION_TYPES['(20,11)'] = 'Battery low';
-NOTIFICATION_TYPES['(20,12)'] = 'Battery empty';
-NOTIFICATION_TYPES['(20,20)'] = 'Below temperature threshold';
-NOTIFICATION_TYPES['(20,21)'] = 'Above temperature threshold';
-NOTIFICATION_TYPES['(20,30)'] = 'Below humidity threshold';
-NOTIFICATION_TYPES['(20,31)'] = `${this.currentHumidity} Above humidity threshold`;
-NOTIFICATION_TYPES['(20,40)'] = 'Frost warning';
-NOTIFICATION_TYPES['(20,80)'] = 'Lost wifi';
-NOTIFICATION_TYPES['(20,320)'] = 'Unusual water consumption (water shut off)';
-NOTIFICATION_TYPES['(20,321)'] = 'Unusual water consumption (water not shut off)';
-NOTIFICATION_TYPES['(20,330)'] = 'Micro leakage';
-NOTIFICATION_TYPES['(20,340)'] = 'Frost warning';
-NOTIFICATION_TYPES['(20,380)'] = 'Lost wifi';
-NOTIFICATION_TYPES['(30,0)'] = 'Flooding';
-NOTIFICATION_TYPES['(30,310)'] = 'Pipe break';
-NOTIFICATION_TYPES['(30,400)'] = 'Maximum volume reached';
-NOTIFICATION_TYPES['(30,430)'] = 'Sense detected water (water shut off)';
-NOTIFICATION_TYPES['(30,431)'] = 'Sense detected water (water not shut off)';
-
 
 /**
  * Ondus Platform constructor
