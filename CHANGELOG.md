@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.X.X] -
+## [1.3.0] - 2020-08-22
 
 ### Added
 
+- A LeakSensor service has been added to each Sense / Sense Plus
+- Notification messages are always printed as warnings to the log until they have been read in the Sense App
+- Configured threshold limits are printed to the log in debug mode
+
 ### Changed
+
+- Improved error logging a bit if server responded with unknown response
 
 ## [Released]
 

@@ -1,6 +1,6 @@
 import { Service, PlatformAccessory } from 'homebridge';
 
-import { OndusPlatform } from './ondusPlatform';
+import { OndusPlatform, NOTIFICATION_TYPES } from './ondusPlatform';
 import { OndusAppliance } from './ondusAppliance';
 
 
@@ -27,6 +27,7 @@ export class OndusSenseGuard extends OndusAppliance {
   private currentFlowRate: number;
   private currentPressure: number;
   private currentTimestamp: string;
+  private leakDetected: boolean;
 
   /**
    * Ondus Sense Guard constructor for mains powered water control valve
@@ -45,6 +46,7 @@ export class OndusSenseGuard extends OndusAppliance {
     this.currentFlowRate = 0;
     this.currentPressure = 0;
     this.currentTimestamp = '';
+    this.leakDetected = false;
 
     // set accessory information
     this.accessory.getService(this.ondusPlatform.Service.AccessoryInformation)!
@@ -112,6 +114,7 @@ export class OndusSenseGuard extends OndusAppliance {
    */
   handleCurrentTemperatureGet(callback) {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET CurrentTemperature`);
+    this.getNotifications(); // For convenience process notifications as well whenever CurrentTemperature is queried.
     this.getMeasurements()
       .then ( () => {
         callback(null, this.currentTemperature);
@@ -177,6 +180,39 @@ export class OndusSenseGuard extends OndusAppliance {
     callback(null, (this.currentFlowRate > 0 ? this.ondusPlatform.Characteristic.InUse.IN_USE : 
       this.ondusPlatform.Characteristic.InUse.NOT_IN_USE));
   
+  }
+
+
+  /**
+   * Fetch all unread notifications for this appliance from the Ondus API. This 
+   * function does not do anything except log the notifications as warnings.
+   */
+  getNotifications() {
+
+    // Fetch buffered notifications from the Ondus API
+    this.getApplianceNotifications()
+      .then( res => {
+        this.ondusPlatform.log.debug(`[${this.logPrefix}] Processing ${res.body.length} notifications ...`);
+
+        // Reset leakDetected before parsing notifications
+        this.leakDetected = false;
+
+        // Iterate over all notifications for this accessory
+        res.body.forEach(element => {
+          if (element.category === 30) {
+            // Check if notifications contained one or more category 30 messages.
+            // If this is the case a leakage has been detected
+            this.leakDetected = true;
+          }
+          // Log each notification message regardless of category. These messages will be 
+          // encountered and logged until they are marked as read in the Ondus mobile app
+          const notification = NOTIFICATION_TYPES[`(${element.category},${element.type})`];
+          this.ondusPlatform.log.warn(`[${this.logPrefix}] ${notification} reported ${element.timestamp}`);
+        });
+      })
+      .catch( err => {
+        this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to process notifications: ${err}`);
+      });  
   }
 
 

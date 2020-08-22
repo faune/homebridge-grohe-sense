@@ -17,6 +17,16 @@ export abstract class OndusAppliance {
   logPrefix: string;
   applianceID: string;
 
+  lowTemperature: number;
+  lowHumidity: number;
+  highTemperature: number;
+  highHumidity: number;
+  lowFlowrate: number;
+  highFlowrate: number;
+  lowPressure: number;
+  highPressure: number;
+
+
   /**
    * Ondus Sense virtual class
    */
@@ -28,6 +38,19 @@ export abstract class OndusAppliance {
   ) {
     this.logPrefix = accessory.context.device.name;
     this.applianceID = accessory.context.device.appliance_id;
+
+    // Placeholder for threshold limits
+    this.lowTemperature = 0;
+    this.lowHumidity = 0;
+    this.highTemperature = 0;
+    this.highHumidity = 0;
+    this.lowFlowrate = 0;
+    this.highFlowrate = 0;
+    this.lowPressure = 0;
+    this.highPressure = 0;
+
+    // Update configured threshold limits
+    this.updateThresholdLimits();
   }
 
   public getLocationID() {
@@ -54,6 +77,74 @@ export abstract class OndusAppliance {
   }
 
   /**
+   * Parse the accessory context and extract all min/max 
+   * thresholds configured for this appliance.
+   */
+  public updateThresholdLimits() {
+    // Find threshold limits
+    this.ondusPlatform.log.debug(`[${this.logPrefix}] Configured limits:`);
+    this.accessory.context.device.config['thresholds'].forEach(element => {
+      if (element.quantity === 'temperature') {
+        if (element.type === 'min') {
+          this.lowTemperature = element.value;
+          if (element.enabled) {
+            this.ondusPlatform.log.debug(`[${this.logPrefix}] - low temperature: ${this.lowTemperature}˚C`);
+          }
+        }
+        if (element.type === 'max') {
+          this.highTemperature = element.value;
+          if (element.enabled) {
+            this.ondusPlatform.log.debug(`[${this.logPrefix}] - high temperature: ${this.highTemperature}˚C`);
+          }
+        }
+      }
+      if (element.quantity === 'humidity') {
+        if (element.type === 'min') {
+          this.lowHumidity = element.value;
+          if (element.enabled) {
+            this.ondusPlatform.log.debug(`[${this.logPrefix}] - low humidity: ${this.lowHumidity}% RF`);
+          }
+        }
+        if (element.type === 'max') {
+          this.highHumidity = element.value;
+          if (element.enabled) {
+            this.ondusPlatform.log.debug(`[${this.logPrefix}] - high humidity: ${this.highHumidity}% RF`);
+          }
+        }
+      }
+      if (element.quantity === 'flowrate') {
+        if (element.type === 'min') {
+          this.lowFlowrate = element.value;
+          if (element.enabled) {
+            this.ondusPlatform.log.debug(`[${this.logPrefix}] - low flowrate: ${this.lowFlowrate}`);
+          }
+        }
+        if (element.type === 'max') {
+          this.highFlowrate = element.value;
+          if (element.enabled) {
+            this.ondusPlatform.log.debug(`[${this.logPrefix}] - high flowrate: ${this.highFlowrate}`);
+          }
+        }
+      }
+      if (element.quantity === 'pressure') {
+        if (element.type === 'min') {
+          this.lowPressure = element.value;
+          if (element.enabled) {
+            this.ondusPlatform.log.debug(`[${this.logPrefix}] - low pressure: ${this.lowPressure} bar`);
+          }
+        }
+        if (element.type === 'max') {
+          this.highPressure = element.value;
+          if (element.enabled) {
+            this.ondusPlatform.log.debug(`[${this.logPrefix}] - high pressure: ${this.highPressure} bar`);
+          }
+        }
+      }
+    });
+  }
+
+
+  /**
    * Retrieve appliance info like appliance ID, type, and name as a JSON object 
    */
   public async getApplianceInfo() {
@@ -73,6 +164,7 @@ export abstract class OndusAppliance {
       .then( info => {
         //this.ondusPlatform.log.debug('info: ', info.body);
         this.accessory.context.device = info.body[0];
+        this.updateThresholdLimits();
       })
       .catch( err => {
         this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to update appliance info: ${err.text}`);

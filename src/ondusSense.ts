@@ -1,7 +1,7 @@
 import { PlatformAccessory, Service } from 'homebridge';
 
 import { OndusAppliance } from './ondusAppliance';
-import { OndusPlatform } from './ondusPlatform';
+import { OndusPlatform, NOTIFICATION_TYPES } from './ondusPlatform';
 
 
 /**
@@ -18,14 +18,14 @@ export class OndusSense extends OndusAppliance {
   temperatureService: Service;
   batteryService?: Service;
 
+  
   private currentTemperature: number;
   private currentHumidity: number;
   private currentBatteryLevel: number;
   private currentWiFiQuality: number;
   private currentConnection: number;
   private currentTimestamp: string;
-  private leakage: boolean;
-
+  private leakDetected: boolean;
   /**
    * Ondus Sense constructor for battery powered water leakage detectors
    */
@@ -45,7 +45,7 @@ export class OndusSense extends OndusAppliance {
     this.currentWiFiQuality = 0;
     this.currentConnection = 0;
     this.currentTimestamp = '';
-    this.leakage = false;
+    this.leakDetected = false;
 
     // set accessory information
     this.accessory.getService(this.ondusPlatform.Service.AccessoryInformation)!
@@ -69,7 +69,6 @@ export class OndusSense extends OndusAppliance {
     this.leakService
       .setCharacteristic(this.ondusPlatform.Characteristic.Name, accessory.context.device.name)
       .setCharacteristic(this.ondusPlatform.Characteristic.LeakDetected, this.ondusPlatform.Characteristic.LeakDetected.LEAK_NOT_DETECTED)
-      .setCharacteristic(this.ondusPlatform.Characteristic.StatusActive, false)
       .setCharacteristic(this.ondusPlatform.Characteristic.StatusFault, this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
 
     // create handlers for required characteristics of Leak service
@@ -182,33 +181,59 @@ export class OndusSense extends OndusAppliance {
   
   /**
    * Handle requests to get the current value of the "LeakDetected" characteristics
-   * @param callback 
+   * 
+   * This is the only handler for this class that must fetch and process appliance notifications 
+   * directly from the Ondus API upon request, because the Sense can potentially report a new 
+   * notification if a configured threshold has been exceeded within the last hours.
    */
   handleLeakDetectedGet(callback) {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET LeakDetected:`);
 
-    // Fetch bufffered notifications from the Ondus API
+    // Fetch buffered notifications from the Ondus API
     this.getApplianceNotifications()
       .then( res => {
-        this.ondusPlatform.log.debug('res: ', res.body);
+        this.ondusPlatform.log.debug(`[${this.logPrefix}] Processing ${res.body.length} notifications ...`);
+
+        // Reset leakDetected before parsing notifications
+        this.leakDetected = false;
+
+        // Iterate over all notifications for this accessory
+        res.body.forEach(element => {
+          if (element.category === 30) {
+            // Check if notifications contained one or more category 30 messages.
+            // If this is the case a leakage has been detected
+            this.leakDetected = true;
+          }
+          // Log each notification message regardless of category. These messages will be 
+          // encountered and logged until they are marked as read in the Ondus mobile app
+          const notification = NOTIFICATION_TYPES[`(${element.category},${element.type})`];
+          this.ondusPlatform.log.warn(`[${this.logPrefix}] ${notification} reported ${element.timestamp}`);
+        });
+
+        // Update the leakService LeakDetected characteristics
+        if (this.leakDetected) {
+          this.leakService.updateCharacteristic(this.ondusPlatform.Characteristic.LeakDetected, 
+            this.ondusPlatform.Characteristic.LeakDetected.LEAK_DETECTED);
+        } else {
+          this.leakService.updateCharacteristic(this.ondusPlatform.Characteristic.LeakDetected, 
+            this.ondusPlatform.Characteristic.LeakDetected.LEAK_NOT_DETECTED);
+        }
+        // Reset StatusFault characteristics for battery service
+        this.leakService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
+          this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
+    
+        callback(null, this.leakDetected);
+
       })
       .catch( err => {
-        this.ondusPlatform.log.error('err: ', err);
+        this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to process notifications: ${err}`);
+        
+        // Set StatusFault characteristics for leakage service
+        this.leakService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
+          this.ondusPlatform.Characteristic.StatusFault.GENERAL_FAULT);  
+  
+        callback(err, this.leakDetected);
       });
-
-   
-    if (this.leakage) {
-      this.leakService.updateCharacteristic(this.ondusPlatform.Characteristic.LeakDetected, 
-        this.ondusPlatform.Characteristic.LeakDetected.LEAK_NOT_DETECTED);
-      //this.leakService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusActive, false);
-      this.leakage = false;
-    } else {
-      this.leakService.updateCharacteristic(this.ondusPlatform.Characteristic.LeakDetected, 
-        this.ondusPlatform.Characteristic.LeakDetected.LEAK_DETECTED);
-      //this.leakService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusActive, true);
-      this.leakage = true;
-    }
-    callback(null, this.leakage);
   }
   
   /**
@@ -300,7 +325,7 @@ export class OndusSense extends OndusAppliance {
         });
       })
       .catch( err => {
-        this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to update temperature and humidity: ${err.text}`);
+        this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to update temperature and humidity: ${err}`);
 
         // Set StatusFault characteristics temperature and humidity service
         [this.temperatureService, this.humidityService].forEach( service => {
@@ -350,7 +375,7 @@ export class OndusSense extends OndusAppliance {
         }
       })
       .catch(err => {
-        this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to update device status: ${err.text}`);
+        this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to update device status: ${err}`);
         
         // Set StatusFault characteristics for battery service
         if (this.batteryService) {
