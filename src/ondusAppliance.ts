@@ -1,7 +1,7 @@
-import { PlatformAccessory } from 'homebridge';
+import { PlatformAccessory, Service } from 'homebridge';
 
-import { OndusPlatform } from './ondusPlatform';
-
+import { OndusPlatform, NOTIFICATION_TYPES } from './ondusPlatform';
+import { OndusThresholds } from './ondusThresholds';
 
 
 /**
@@ -17,15 +17,15 @@ export abstract class OndusAppliance {
   logPrefix: string;
   applianceID: string;
 
-  lowTemperature: number;
-  lowHumidity: number;
-  highTemperature: number;
-  highHumidity: number;
-  lowFlowrate: number;
-  highFlowrate: number;
-  lowPressure: number;
-  highPressure: number;
+  // Common sensor services
+  leakService: Service;
+  temperatureService: Service;
 
+  // Placeholders for common sensor data
+  currentTimestamp: string;
+  currentTemperature: number;
+  leakDetected: boolean;
+  thresholds: OndusThresholds;
 
   /**
    * Ondus Sense virtual class
@@ -39,18 +39,51 @@ export abstract class OndusAppliance {
     this.logPrefix = accessory.context.device.name;
     this.applianceID = accessory.context.device.appliance_id;
 
-    // Placeholder for threshold limits
-    this.lowTemperature = 0;
-    this.lowHumidity = 0;
-    this.highTemperature = 0;
-    this.highHumidity = 0;
-    this.lowFlowrate = 0;
-    this.highFlowrate = 0;
-    this.lowPressure = 0;
-    this.highPressure = 0;
+    // Placeholders for common sensor data
+    this.currentTemperature = 0;
+    this.currentTimestamp = '';
+    this.leakDetected = false;
+    this.thresholds = new OndusThresholds(this.ondusPlatform.log, this.accessory);
 
     // Update configured threshold limits
-    this.updateThresholdLimits();
+    this.thresholds.update();
+
+    // Initialize common sensor services
+
+    /**
+     * Leakage service
+     */
+    this.leakService = this.accessory.getService(this.ondusPlatform.Service.LeakSensor) ||
+      this.accessory.addService(this.ondusPlatform.Service.LeakSensor);
+
+    // set the Leak service characteristics
+    this.leakService
+      .setCharacteristic(this.ondusPlatform.Characteristic.Name, accessory.context.device.name)
+      .setCharacteristic(this.ondusPlatform.Characteristic.LeakDetected, this.ondusPlatform.Characteristic.LeakDetected.LEAK_NOT_DETECTED)
+      .setCharacteristic(this.ondusPlatform.Characteristic.StatusFault, this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
+
+    // create handlers for required characteristics of Leak service
+    this.leakService.getCharacteristic(this.ondusPlatform.Characteristic.LeakDetected)
+      .on('get', this.handleLeakDetectedGet.bind(this));
+
+    /**
+     * Temperature Service
+     */
+
+    // get the Temperature service if it exists, otherwise create a new Temperature service
+    this.temperatureService = this.accessory.getService(this.ondusPlatform.Service.TemperatureSensor) || 
+       this.accessory.addService(this.ondusPlatform.Service.TemperatureSensor);
+    
+    // set the Temperature service characteristics
+    this.temperatureService
+      .setCharacteristic(this.ondusPlatform.Characteristic.Name, accessory.context.device.name)
+      .setCharacteristic(this.ondusPlatform.Characteristic.StatusFault, this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
+    
+    // create handlers for required characteristics of Temperature service
+    this.temperatureService.getCharacteristic(this.ondusPlatform.Characteristic.CurrentTemperature)
+      .on('get', this.handleCurrentTemperatureGet.bind(this));
+
+
   }
 
   public getLocationID() {
@@ -77,72 +110,89 @@ export abstract class OndusAppliance {
   }
 
   /**
-   * Parse the accessory context and extract all min/max 
-   * thresholds configured for this appliance.
+   * Handle requests to get the current value of the "LeakDetected" characteristics
+   * 
+   * Fetch all unread notifications for this appliance from the Ondus API.
+   * 
+   * If one or more category 30 notification is encountered, the leakService will
+   * trigger a LEAK_DETECTED. This also means that the only way to clear LEAK_DETECTED
+   * events is for the user to mark the message(s) responsible for triggering the 
+   * behavior as either read or delete them altogether from the Ondus API.
+   * 
+   * NOTE: 
+   * This is the only handler for this class that must fetch and process appliance notifications 
+   * directly from the Ondus API upon request, because the Sense and Guard can potentially report 
+   * new notifications if a configured threshold has been exceeded within the last hours, or if 
+   * a leak is detected.
    */
-  public updateThresholdLimits() {
-    // Find threshold limits
-    this.ondusPlatform.log.debug(`[${this.logPrefix}] Configured limits:`);
-    this.accessory.context.device.config['thresholds'].forEach(element => {
-      if (element.quantity === 'temperature') {
-        if (element.type === 'min') {
-          this.lowTemperature = element.value;
-          if (element.enabled) {
-            this.ondusPlatform.log.debug(`[${this.logPrefix}] - low temperature: ${this.lowTemperature}˚C`);
-          }
+  handleLeakDetectedGet(callback) {
+    this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET LeakDetected:`);
+
+    // Fetch buffered notifications from the Ondus API
+    this.getApplianceNotifications()
+      .then( res => {
+
+        // Reset leakDetected before parsing notifications
+        this.leakDetected = false;
+
+        // Log number of pending notifications
+        if (res.body.length > 0) {
+          this.ondusPlatform.log.debug(`[${this.logPrefix}] Processing ${res.body.length} notifications ...`);
+        } else {
+          this.ondusPlatform.log.debug(`[${this.logPrefix}] No pending notifications`);
         }
-        if (element.type === 'max') {
-          this.highTemperature = element.value;
-          if (element.enabled) {
-            this.ondusPlatform.log.debug(`[${this.logPrefix}] - high temperature: ${this.highTemperature}˚C`);
+
+        // Iterate over all notifications for this accessory
+        res.body.forEach(element => {
+          if (element.category === 30) {
+            // Check if notifications contained one or more category 30 messages.
+            // If this is the case a leakage has been detected
+            this.leakDetected = true;
           }
+          // Log each notification message regardless of category. These messages will be 
+          // encountered and logged until they are marked as read in the Ondus mobile app
+          const notification = NOTIFICATION_TYPES[`(${element.category},${element.type})`];
+          this.ondusPlatform.log.warn(`[${this.logPrefix}] ${notification} reported ${element.timestamp}`);
+        });
+
+        // Update the leakService LeakDetected characteristics
+        if (this.leakDetected) {
+          this.leakService.updateCharacteristic(this.ondusPlatform.Characteristic.LeakDetected, 
+            this.ondusPlatform.Characteristic.LeakDetected.LEAK_DETECTED);
+        } else {
+          this.leakService.updateCharacteristic(this.ondusPlatform.Characteristic.LeakDetected, 
+            this.ondusPlatform.Characteristic.LeakDetected.LEAK_NOT_DETECTED);
         }
-      }
-      if (element.quantity === 'humidity') {
-        if (element.type === 'min') {
-          this.lowHumidity = element.value;
-          if (element.enabled) {
-            this.ondusPlatform.log.debug(`[${this.logPrefix}] - low humidity: ${this.lowHumidity}% RF`);
-          }
-        }
-        if (element.type === 'max') {
-          this.highHumidity = element.value;
-          if (element.enabled) {
-            this.ondusPlatform.log.debug(`[${this.logPrefix}] - high humidity: ${this.highHumidity}% RF`);
-          }
-        }
-      }
-      if (element.quantity === 'flowrate') {
-        if (element.type === 'min') {
-          this.lowFlowrate = element.value;
-          if (element.enabled) {
-            this.ondusPlatform.log.debug(`[${this.logPrefix}] - low flowrate: ${this.lowFlowrate}`);
-          }
-        }
-        if (element.type === 'max') {
-          this.highFlowrate = element.value;
-          if (element.enabled) {
-            this.ondusPlatform.log.debug(`[${this.logPrefix}] - high flowrate: ${this.highFlowrate}`);
-          }
-        }
-      }
-      if (element.quantity === 'pressure') {
-        if (element.type === 'min') {
-          this.lowPressure = element.value;
-          if (element.enabled) {
-            this.ondusPlatform.log.debug(`[${this.logPrefix}] - low pressure: ${this.lowPressure} bar`);
-          }
-        }
-        if (element.type === 'max') {
-          this.highPressure = element.value;
-          if (element.enabled) {
-            this.ondusPlatform.log.debug(`[${this.logPrefix}] - high pressure: ${this.highPressure} bar`);
-          }
-        }
-      }
-    });
+        // Reset StatusFault characteristics for battery service
+        this.leakService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
+          this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
+    
+        callback(null, this.leakDetected);
+
+      })
+      .catch( err => {
+        this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to process notifications: ${err}`);
+        
+        // Set StatusFault characteristics for leakage service
+        this.leakService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
+          this.ondusPlatform.Characteristic.StatusFault.GENERAL_FAULT);  
+  
+        callback(err, this.leakDetected);
+      });
   }
 
+  /**
+   * Handle requests to get the current value of the "Current Temperature" characteristic
+   */
+  handleCurrentTemperatureGet(callback) {
+    this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET CurrentTemperature`);
+    callback(null, this.currentTemperature);
+  }
+
+ 
+ 
+ 
+  // ---- HELPER FUNCTIONS BELOW HANDLING ONDUS IDs AUTOMATICALLY ----
 
   /**
    * Retrieve appliance info like appliance ID, type, and name as a JSON object 
@@ -164,7 +214,7 @@ export abstract class OndusAppliance {
       .then( info => {
         //this.ondusPlatform.log.debug('info: ', info.body);
         this.accessory.context.device = info.body[0];
-        this.updateThresholdLimits();
+        this.thresholds.update();
       })
       .catch( err => {
         this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to update appliance info: ${err.text}`);

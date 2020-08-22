@@ -1,6 +1,6 @@
 import { Service, PlatformAccessory } from 'homebridge';
 
-import { OndusPlatform, NOTIFICATION_TYPES } from './ondusPlatform';
+import { OndusPlatform } from './ondusPlatform';
 import { OndusAppliance } from './ondusAppliance';
 
 
@@ -19,16 +19,14 @@ export class OndusSenseGuard extends OndusAppliance {
   static VALVE_OPEN = true;
   static VALVE_CLOSED = false;
 
-  temperatureService: Service;
+  // Extended sensor services
   valveService: Service;
 
-  private currentTemperature: number;
+  // Extended sensor data properties
   private currentValveState: boolean = OndusSenseGuard.VALVE_OPEN || OndusSenseGuard.VALVE_CLOSED;
   private currentFlowRate: number;
   private currentPressure: number;
-  private currentTimestamp: string;
-  private leakDetected: boolean;
-
+ 
   /**
    * Ondus Sense Guard constructor for mains powered water control valve
    */
@@ -40,13 +38,10 @@ export class OndusSenseGuard extends OndusAppliance {
   ) {
     super(ondusPlatform, locationID, roomID, accessory);
 
-    // Placeholders for sensor data
-    this.currentTemperature = 0;
+    // Set extended sensor data to default values
     this.currentValveState = OndusSenseGuard.VALVE_OPEN;
     this.currentFlowRate = 0;
     this.currentPressure = 0;
-    this.currentTimestamp = '';
-    this.leakDetected = false;
 
     // set accessory information
     this.accessory.getService(this.ondusPlatform.Service.AccessoryInformation)!
@@ -56,28 +51,17 @@ export class OndusSenseGuard extends OndusAppliance {
       .setCharacteristic(this.ondusPlatform.Characteristic.SerialNumber, this.unhexlify(accessory.context.device.serial_number))
       .setCharacteristic(this.ondusPlatform.Characteristic.FirmwareRevision, accessory.context.device.version)
       .setCharacteristic(this.ondusPlatform.Characteristic.AppMatchingIdentifier, '1451814256');
-
-
-    /**
-     * Temperature Service
-     */
-
-    // get the Temperature service if it exists, otherwise create a new Temperature service
-    this.temperatureService = this.accessory.getService(this.ondusPlatform.Service.TemperatureSensor) || 
-       this.accessory.addService(this.ondusPlatform.Service.TemperatureSensor);
-    
-    // set the Temperature service characteristics
-    this.temperatureService
-      .setCharacteristic(this.ondusPlatform.Characteristic.Name, accessory.context.device.name)
-      .setCharacteristic(this.ondusPlatform.Characteristic.StatusFault, this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
-    
-    // create handlers for required characteristics of Temperature service
-    this.temperatureService.getCharacteristic(this.ondusPlatform.Characteristic.CurrentTemperature)
-      .on('get', this.handleCurrentTemperatureGet.bind(this));
-
+      
+    // Initialize extended sensor services
 
     /**
      * Valve service
+     * 
+     * A short summary for Active / InUse - Logic:
+     * Active=0, InUse=0 -> Off
+     * Active=1, InUse=0 -> Waiting [Starting, Activated but no water flowing (yet)]
+     * Active=1, InUse=1 -> Running
+     * Active=0, InUse=1 -> Stopping
      */
     // get the Valve service if it exists, otherwise create a new Valve service
     this.valveService = this.accessory.getService(this.ondusPlatform.Service.Valve) ||
@@ -96,25 +80,15 @@ export class OndusSenseGuard extends OndusAppliance {
       .on('get', this.handleActiveGet.bind(this))
       .on('set', this.handleActiveSet.bind(this));
 
-    /**
-      * A short summary for Active / InUse - Logic:
-      * Active=0, InUse=0 -> Off
-      * Active=1, InUse=0 -> Waiting [Starting, Activated but no water flowing (yet)]
-      * Active=1, InUse=1 -> Running
-      * Active=0, InUse=1 -> Stopping
-      */    
-    // I am not sure if this is even needed when Active and InUse are controlled together
-    //this.valveService.getCharacteristic(this.ondusPlatform.Characteristic.InUse)
-    //  .on('get', this.handleInUseGet.bind(this));
 
   }
+  
 
   /**
    * Handle requests to get the current value of the "Current Temperature" characteristic
    */
   handleCurrentTemperatureGet(callback) {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET CurrentTemperature`);
-    this.getNotifications(); // For convenience process notifications as well whenever CurrentTemperature is queried.
     this.getMeasurements()
       .then ( () => {
         callback(null, this.currentTemperature);
@@ -181,40 +155,6 @@ export class OndusSenseGuard extends OndusAppliance {
       this.ondusPlatform.Characteristic.InUse.NOT_IN_USE));
   
   }
-
-
-  /**
-   * Fetch all unread notifications for this appliance from the Ondus API. This 
-   * function does not do anything except log the notifications as warnings.
-   */
-  getNotifications() {
-
-    // Fetch buffered notifications from the Ondus API
-    this.getApplianceNotifications()
-      .then( res => {
-        this.ondusPlatform.log.debug(`[${this.logPrefix}] Processing ${res.body.length} notifications ...`);
-
-        // Reset leakDetected before parsing notifications
-        this.leakDetected = false;
-
-        // Iterate over all notifications for this accessory
-        res.body.forEach(element => {
-          if (element.category === 30) {
-            // Check if notifications contained one or more category 30 messages.
-            // If this is the case a leakage has been detected
-            this.leakDetected = true;
-          }
-          // Log each notification message regardless of category. These messages will be 
-          // encountered and logged until they are marked as read in the Ondus mobile app
-          const notification = NOTIFICATION_TYPES[`(${element.category},${element.type})`];
-          this.ondusPlatform.log.warn(`[${this.logPrefix}] ${notification} reported ${element.timestamp}`);
-        });
-      })
-      .catch( err => {
-        this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to process notifications: ${err}`);
-      });  
-  }
-
 
   /**
   * Fetch Ondus Sense Guard measurement data. Returns a promise that will be resolved
