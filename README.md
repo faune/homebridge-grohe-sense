@@ -25,6 +25,11 @@ The following Grohe Sense components are supported:
   * Sense battery powered water leakage detector
   * Sense Plus mains powered water leakage detector
 
+## Screenshot
+
+![Grohe Sense Guard sensor layout](https://raw.githubusercontent.com/faune/homebridge-grohe-sense/master/img/sensors.png "Grohe Sense Guard sensor layout")
+
+
 ## Download
 
 Released versions are published through npm and can be found here:
@@ -32,6 +37,44 @@ Released versions are published through npm and can be found here:
 https://www.npmjs.com/package/homebridge-grohe-sense
 
 You can also search for this plugin from the awesome Homebridge web UI and it will automagically be installed/updated for your.
+
+## What is supported
+
+Plugin will automatically find and configure your Sense devices, and expose the following HomeKit services:
+
+ * Sense Guard
+   - Valve
+   - Temperature Sensor
+   - Leakage Sensor
+   - Water pressure (log only)
+   - Water flowrate (log only)
+ * Sense
+   - Leakage Sensor
+   - Temperature Sensor
+   - Humidity Sensor
+   - Battery Service
+ * Sense Plus (untested, as I dont have one)
+   - Leakage Sensor
+   - Temperature Sensor
+   - Humidity Sensor
+   
+
+## What is not supported
+
+* The system collects a lot of interesting information that unfortunately have no suitable characteristics counterpart defined in the official Apple HAP. This include (but not limited to) for example :
+  - water pressure
+  - flow metrics
+  - water consumption
+  - statistics
+  - notifications
+
+
+## What I would like to see in the future
+ 
+* Proper OAuth library handling authentication
+* Eve history would be awesome using Fakegato
+* Displaying water pressure, flow metrics +++, but I have no idea what characteristics to use in Homebridge for this...
+
 
 ## Configuration section in `config.json`
 
@@ -58,44 +101,6 @@ How often to query Ondus API for new data. Default setting of `3600` seconds is 
 
 ### `valve_control`
 If you have kids like me with iCloud family sharing enabled, and dont want them brats (just kidding, mine are actually angels) to turn off the main water supply through HomeKit as a prank when you are showering - this is for you! Set `valve_control` to `false`, and the plugin will ignore all valve control requests :-)
-
-
-## What is supported
-
-Plugin will automatically find and configure your Sense devices, and expose the following HomeKit services:
-
- * Sense Guard
-   - Valve on/off
-   - Valve state
-   - Temperature
-   - Water pressure (log only)
-   - Water flowrate (log only)
- * Sense
-   - Temperature
-   - Humidity
-   - Battery
- * Sense Plus (untested, as I dont have one)
-   - Temperature
-   - Humidity
-
-
-## What is not supported
-
-* The system collects a lot of interesting information that unfortunately have no suitable characteristics counterpart defined in the official Apple HAP. This include (but not limited to) for example :
-  - water pressure
-  - flow metrics
-  - water consumption
-  - statistics
-  - notifications
-
-
-## What I would like to see in the future
- 
-* Proper OAuth library handling authentication
-* Eve history would be awesome using Fakegato
-* Displaying water pressure, flow metrics +++, but I have no idea what characteristics to use in Homebridge for this...
-
-
 
 
 ## Obtaining a `refresh token`

@@ -1,7 +1,8 @@
-import { PlatformAccessory } from 'homebridge';
+import { PlatformAccessory, Service } from 'homebridge';
 
 import { OndusPlatform } from './ondusPlatform';
-
+import { OndusThresholds } from './ondusThresholds';
+import { OndusNotification, NOTIFICATION_CATEGORY_CRITICAL } from './ondusNotification';
 
 
 /**
@@ -17,8 +18,19 @@ export abstract class OndusAppliance {
   logPrefix: string;
   applianceID: string;
 
+  // Common sensor services
+  leakService: Service;
+  temperatureService: Service;
+
+  // Placeholders for common sensor data
+  currentTimestamp: string;
+  currentTemperature: number;
+  leakDetected: boolean;
+  thresholds: OndusThresholds;
+
+  
   /**
-   * Ondus Sense virtual class
+   * OndusAppliance abstract constructor
    */
   constructor(
     public ondusPlatform: OndusPlatform,
@@ -28,7 +40,167 @@ export abstract class OndusAppliance {
   ) {
     this.logPrefix = accessory.context.device.name;
     this.applianceID = accessory.context.device.appliance_id;
+
+    // Placeholders for common sensor data
+    this.currentTemperature = 0;
+    this.currentTimestamp = '';
+    this.leakDetected = false;
+    this.thresholds = new OndusThresholds(this.ondusPlatform.log, this.accessory);
+
+    // Update configured threshold limits
+    this.thresholds.update();
+
+
+    // Initialize common sensor services
+
+    /**
+     * Leakage service
+     */
+    this.leakService = this.accessory.getService(this.ondusPlatform.Service.LeakSensor) ||
+      this.accessory.addService(this.ondusPlatform.Service.LeakSensor);
+
+    // set the Leak service characteristics
+    this.leakService
+      .setCharacteristic(this.ondusPlatform.Characteristic.Name, accessory.context.device.name)
+      .setCharacteristic(this.ondusPlatform.Characteristic.LeakDetected, this.ondusPlatform.Characteristic.LeakDetected.LEAK_NOT_DETECTED)
+      .setCharacteristic(this.ondusPlatform.Characteristic.StatusFault, this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
+
+    // create handlers for required characteristics of Leak service
+    this.leakService.getCharacteristic(this.ondusPlatform.Characteristic.LeakDetected)
+      .on('get', this.handleLeakDetectedGet.bind(this));
+
+    /**
+     * Temperature Service
+     */
+
+    // get the Temperature service if it exists, otherwise create a new Temperature service
+    this.temperatureService = this.accessory.getService(this.ondusPlatform.Service.TemperatureSensor) || 
+       this.accessory.addService(this.ondusPlatform.Service.TemperatureSensor);
+    
+    // set the Temperature service characteristics
+    this.temperatureService
+      .setCharacteristic(this.ondusPlatform.Characteristic.Name, accessory.context.device.name)
+      .setCharacteristic(this.ondusPlatform.Characteristic.StatusFault, this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
+    
+    // create handlers for required characteristics of Temperature service
+    this.temperatureService.getCharacteristic(this.ondusPlatform.Characteristic.CurrentTemperature)
+      .on('get', this.handleCurrentTemperatureGet.bind(this));
+
+
   }
+
+  /**
+   * This function is designed to start any custom action in addition
+   * to what is done in the constructor. Some child instances might
+   * require a bit different code for initial data query, and this
+   * will be problematic as the super constructor must be called
+   * regardless before functionality can start to be overloaded
+   */
+  start(): void {
+    return; 
+  }
+
+  // ---- HTTP HANDLER FUNCTIONS BELOW ----
+
+
+  /**
+   * Handle requests to get the current value of the "LeakDetected" characteristics
+   * 
+   * Fetch all unread notifications for this appliance from the Ondus API.
+   * 
+   * If one or more category 30 notification is encountered, the leakService will
+   * trigger a LEAK_DETECTED. This also means that the only way to clear LEAK_DETECTED
+   * events is for the user to mark the message(s) responsible for triggering the 
+   * behavior as either read or delete them altogether from the Ondus API.
+   * 
+   * NOTE: 
+   * This is the only handler for this class that must fetch and process appliance notifications 
+   * directly from the Ondus API upon request, because the Sense and Guard can potentially report 
+   * new notifications if a configured threshold has been exceeded within the last hours, or if 
+   * a leak is detected.
+   */
+  handleLeakDetectedGet(callback) {
+    this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET LeakDetected:`);
+
+    // Fetch buffered notifications from the Ondus API
+    this.getApplianceNotifications()
+      .then( res => {
+
+        // Reset leakDetected before parsing notifications
+        this.leakDetected = false;
+
+        // Log number of pending notifications
+        if (res.body.length > 0) {
+          this.ondusPlatform.log.debug(`[${this.logPrefix}] Processing ${res.body.length} notifications ...`);
+        } else {
+          this.ondusPlatform.log.debug(`[${this.logPrefix}] No pending notifications`);
+        }
+
+        // Iterate over all notifications for this accessory
+        res.body.forEach(element => {
+          if (element.category === NOTIFICATION_CATEGORY_CRITICAL ) {
+            // Check if notifications contained one or more category critical messages.
+            // If this is the case a leakage has been detected
+            this.leakDetected = true;
+          }
+          // Log each notification message regardless of category. These messages will be 
+          // encountered and logged until they are marked as read in the Ondus mobile app
+          const notification = new OndusNotification(this, element.category, element.type, element.timestamp).get();
+          this.ondusPlatform.log.warn(`[${this.logPrefix}] ${notification}`);
+        });
+
+        // Update the leakService LeakDetected characteristics
+        if (this.leakDetected) {
+          this.leakService.updateCharacteristic(this.ondusPlatform.Characteristic.LeakDetected, 
+            this.ondusPlatform.Characteristic.LeakDetected.LEAK_DETECTED);
+        } else {
+          this.leakService.updateCharacteristic(this.ondusPlatform.Characteristic.LeakDetected, 
+            this.ondusPlatform.Characteristic.LeakDetected.LEAK_NOT_DETECTED);
+        }
+        // Reset StatusFault characteristics for battery service
+        this.leakService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
+          this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
+    
+        callback(null, this.leakDetected);
+
+      })
+      .catch( err => {
+        this.ondusPlatform.log.debug(err);
+        this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to process notifications: ${err}`);
+        
+        // Set StatusFault characteristics for leakage service
+        this.leakService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
+          this.ondusPlatform.Characteristic.StatusFault.GENERAL_FAULT);  
+  
+        callback(err, this.leakDetected);
+      });
+  }
+
+  /**
+   * Handle requests to get the current value of the "Current Temperature" characteristic
+   * 
+   * This function should be overloaded depending on the strategy for fetching new temperature data
+   */
+  handleCurrentTemperatureGet(callback) {
+    this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET CurrentTemperature`);
+    callback(null, this.currentTemperature);
+  }
+
+ 
+  // ---- UTILITY FUNCTIONS BELOW ----
+
+  /**
+   * Convert decimal encoded HEX string to hexadecimal encoded HEX string 
+   */
+  public unhexlify(str: string) {
+    let result = '';
+    for (let i=0, l=str.length; i<l; i+=2) {
+      result += String.fromCharCode(parseInt(str.substr(i, 2), 16));
+    }
+    return result;
+  }
+ 
+  // ---- HELPER FUNCTIONS BELOW HANDLING ONDUS IDs AUTOMATICALLY ----
 
   public getLocationID() {
     return this.locationID;
@@ -40,17 +212,6 @@ export abstract class OndusAppliance {
 
   public getApplianceID() {
     return this.applianceID;
-  }
-
-  /**
-   * Utility functions
-   */
-  public unhexlify(str: string) {
-    let result = '';
-    for (let i=0, l=str.length; i<l; i+=2) {
-      result += String.fromCharCode(parseInt(str.substr(i, 2), 16));
-    }
-    return result;
   }
 
   /**
@@ -73,6 +234,7 @@ export abstract class OndusAppliance {
       .then( info => {
         //this.ondusPlatform.log.debug('info: ', info.body);
         this.accessory.context.device = info.body[0];
+        this.thresholds.update();
       })
       .catch( err => {
         this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to update appliance info: ${err.text}`);

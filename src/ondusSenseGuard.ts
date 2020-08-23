@@ -4,13 +4,18 @@ import { OndusPlatform } from './ondusPlatform';
 import { OndusAppliance } from './ondusAppliance';
 
 
-
-
-
 /**
- * Platform Accessory
- * An instance of this class is created for each accessory your platform registers
- * Each accessory may expose multiple services of different service types.
+ * Grohe Sense Guard Accessory for the Ondus platform
+ * 
+ * This accessory exposes the following services:
+ * - Temperature
+ * - Leakage
+ * - Valve 
+ * 
+ * In addition the following metrics are logged, but not exposed in HomeKit:
+ * - Water pressure
+ * - Water flowrate 
+ * 
  */
 export class OndusSenseGuard extends OndusAppliance {
   static ONDUS_TYPE = 103;
@@ -19,17 +24,18 @@ export class OndusSenseGuard extends OndusAppliance {
   static VALVE_OPEN = true;
   static VALVE_CLOSED = false;
 
-  temperatureService: Service;
+  // Extended sensor services
   valveService: Service;
 
-  private currentTemperature: number;
+  // Extended sensor data properties
   private currentValveState: boolean = OndusSenseGuard.VALVE_OPEN || OndusSenseGuard.VALVE_CLOSED;
   private currentFlowRate: number;
   private currentPressure: number;
-  private currentTimestamp: string;
-
+ 
   /**
    * Ondus Sense Guard constructor for mains powered water control valve
+   * 
+   * Inherrits all common sensor handling from OndusAppliance
    */
   constructor(
     public ondusPlatform: OndusPlatform,
@@ -39,12 +45,10 @@ export class OndusSenseGuard extends OndusAppliance {
   ) {
     super(ondusPlatform, locationID, roomID, accessory);
 
-    // Placeholders for sensor data
-    this.currentTemperature = 0;
+    // Set extended sensor data to default values
     this.currentValveState = OndusSenseGuard.VALVE_OPEN;
     this.currentFlowRate = 0;
     this.currentPressure = 0;
-    this.currentTimestamp = '';
 
     // set accessory information
     this.accessory.getService(this.ondusPlatform.Service.AccessoryInformation)!
@@ -54,29 +58,19 @@ export class OndusSenseGuard extends OndusAppliance {
       .setCharacteristic(this.ondusPlatform.Characteristic.SerialNumber, this.unhexlify(accessory.context.device.serial_number))
       .setCharacteristic(this.ondusPlatform.Characteristic.FirmwareRevision, accessory.context.device.version)
       .setCharacteristic(this.ondusPlatform.Characteristic.AppMatchingIdentifier, '1451814256');
-
-
-    /**
-     * Temperature Service
-     */
-
-    // get the Temperature service if it exists, otherwise create a new Temperature service
-    this.temperatureService = this.accessory.getService(this.ondusPlatform.Service.TemperatureSensor) || 
-       this.accessory.addService(this.ondusPlatform.Service.TemperatureSensor);
-    
-    // set the Temperature service characteristics
-    this.temperatureService
-      .setCharacteristic(this.ondusPlatform.Characteristic.Name, accessory.context.device.name)
-      .setCharacteristic(this.ondusPlatform.Characteristic.StatusFault, this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
-    
-    // create handlers for required characteristics of Temperature service
-    this.temperatureService.getCharacteristic(this.ondusPlatform.Characteristic.CurrentTemperature)
-      .on('get', this.handleCurrentTemperatureGet.bind(this));
-
+      
+    // Initialize extended sensor services
 
     /**
      * Valve service
+     * 
+     * A short summary for Active / InUse - Logic:
+     * Active=0, InUse=0 -> Off
+     * Active=1, InUse=0 -> Waiting [Starting, Activated but no water flowing (yet)]
+     * Active=1, InUse=1 -> Running
+     * Active=0, InUse=1 -> Stopping
      */
+
     // get the Valve service if it exists, otherwise create a new Valve service
     this.valveService = this.accessory.getService(this.ondusPlatform.Service.Valve) ||
       this.accessory.addService(this.ondusPlatform.Service.Valve);
@@ -94,18 +88,10 @@ export class OndusSenseGuard extends OndusAppliance {
       .on('get', this.handleActiveGet.bind(this))
       .on('set', this.handleActiveSet.bind(this));
 
-    /**
-      * A short summary for Active / InUse - Logic:
-      * Active=0, InUse=0 -> Off
-      * Active=1, InUse=0 -> Waiting [Starting, Activated but no water flowing (yet)]
-      * Active=1, InUse=1 -> Running
-      * Active=0, InUse=1 -> Stopping
-      */    
-    // I am not sure if this is even needed when Active and InUse are controlled together
-    //this.valveService.getCharacteristic(this.ondusPlatform.Characteristic.InUse)
-    //  .on('get', this.handleInUseGet.bind(this));
 
   }
+
+  // ---- HTTP HANDLER FUNCTIONS BELOW ----
 
   /**
    * Handle requests to get the current value of the "Current Temperature" characteristic
@@ -179,6 +165,8 @@ export class OndusSenseGuard extends OndusAppliance {
   
   }
 
+  // ---- ONDUS API FUNCTIONS BELOW ----
+
 
   /**
   * Fetch Ondus Sense Guard measurement data. Returns a promise that will be resolved
@@ -227,10 +215,10 @@ export class OndusSenseGuard extends OndusAppliance {
           this.currentTemperature = lastMeasurement.temperature_guard;
           const valveState = this.currentValveState === OndusSenseGuard.VALVE_OPEN? 'Open': 'Closed';
           this.ondusPlatform.log.info(`[${this.logPrefix}] Timestamp: ${this.currentTimestamp}`);          
-          this.ondusPlatform.log.info(`[${this.logPrefix}] - Valve: ${valveState}`);
-          this.ondusPlatform.log.info(`[${this.logPrefix}] - Flowrate: ${this.currentFlowRate}`);
-          this.ondusPlatform.log.info(`[${this.logPrefix}] - Pressure: ${this.currentPressure} bar`);
-          this.ondusPlatform.log.info(`[${this.logPrefix}] - Temperature: ${this.currentTemperature}˚C`);
+          this.ondusPlatform.log.info(`[${this.logPrefix}] => Valve: ${valveState}`);
+          this.ondusPlatform.log.info(`[${this.logPrefix}] => Flowrate: ${this.currentFlowRate}`);
+          this.ondusPlatform.log.info(`[${this.logPrefix}] => Pressure: ${this.currentPressure} bar`);
+          this.ondusPlatform.log.info(`[${this.logPrefix}] => Temperature: ${this.currentTemperature}˚C`);
 
           // Reset StatusFault characteristics for temperature service
           this.temperatureService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 

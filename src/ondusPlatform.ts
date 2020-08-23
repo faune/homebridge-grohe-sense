@@ -1,41 +1,11 @@
 import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge';
 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
+import { OndusSession } from './ondusSession'; // Ondus HTTP library
 import { OndusSense } from './ondusSense';
 import { OndusSensePlus } from './ondusSensePlus';
 import { OndusSenseGuard } from './ondusSenseGuard';
 
-
-// Ondus HTTP library
-import { OndusSession } from './ondusSession';
-
-/* TODO: When implementing notification support
-// The protocol returns notification information as a {category: type}
-export interface IHash {
-  [details: string] : string;
-} 
-const NOTIFICATION_TYPES: IHash = {};
-NOTIFICATION_TYPES['(10,60)'] = 'Firmware update available';
-NOTIFICATION_TYPES['(10,460)'] = 'Firmware update available';
-NOTIFICATION_TYPES['(20,11)'] = 'Battery low';
-NOTIFICATION_TYPES['(20,12)'] = 'Battery empty';
-NOTIFICATION_TYPES['(20,20'] = 'Below temperature threshold';
-NOTIFICATION_TYPES['(20,21'] = 'Above temperature threshold';
-NOTIFICATION_TYPES['(20,30'] = 'Below humidity threshold';
-NOTIFICATION_TYPES['(20,31'] = 'Above humidity threshold';
-NOTIFICATION_TYPES['(20,40'] = 'Frost warning';
-NOTIFICATION_TYPES['(20,80'] = 'Lost wifi';
-NOTIFICATION_TYPES['(20,320'] = 'Unusual water consumption (water shut off)';
-NOTIFICATION_TYPES['(20,321'] = 'Unusual water consumption (water not shut off)';
-NOTIFICATION_TYPES['(20,330'] = 'Micro leakage';
-NOTIFICATION_TYPES['(20,340'] = 'Frost warning';
-NOTIFICATION_TYPES['(20,380'] = 'Lost wifi';
-NOTIFICATION_TYPES['(30,0'] = 'Flooding';
-NOTIFICATION_TYPES['(30,310'] = 'Pipe break';
-NOTIFICATION_TYPES['(30,400'] = 'Maximum volume reached';
-NOTIFICATION_TYPES['(30,430'] = 'Sense detected water (water shut off)';
-NOTIFICATION_TYPES['(30,431)'] = 'Sense detected water (water not shut off)';
-*/
 
 /**
  * Ondus Platform constructor
@@ -49,6 +19,10 @@ export class OndusPlatform implements DynamicPlatformPlugin {
 
   public ondusSession: OndusSession;
 
+
+  /**
+    * OndusPlatform constructor
+    */
   constructor(
     public readonly log: Logger,
     public readonly config: PlatformConfig,
@@ -186,15 +160,15 @@ export class OndusPlatform implements DynamicPlatformPlugin {
     switch(applianceInfo.type) {
       case OndusSense.ONDUS_TYPE:
         this.log.info(`Opening device handler "${OndusSense.ONDUS_NAME}" for "${applianceInfo.name}"`);
-        new OndusSense(this, locationID, roomID, accessory);
+        new OndusSense(this, locationID, roomID, accessory).start();
         break;
       case OndusSensePlus.ONDUS_TYPE:
         this.log.info(`Opening device handler "${OndusSensePlus.ONDUS_NAME}" for "${applianceInfo.name}"`);
-        new OndusSensePlus(this, locationID, roomID, accessory);
+        new OndusSensePlus(this, locationID, roomID, accessory).start();
         break;
       case OndusSenseGuard.ONDUS_TYPE:
         this.log.info(`Opening device handler "${OndusSenseGuard.ONDUS_NAME}" for "${applianceInfo.name}"`);
-        new OndusSenseGuard(this, locationID, roomID, accessory);
+        new OndusSenseGuard(this, locationID, roomID, accessory).start();
         break;
       default:
         this.log.warn(`Unsupported Ondus appliance type encountered: ${applianceInfo.type} - ignoring`);

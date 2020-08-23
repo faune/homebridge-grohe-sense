@@ -5,15 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [Released]
 
-## [1.X.X] -
+## [1.3.0] - 2020-08-23
+
+This release adds 4 LeakSensors in total. A LeakSensors will trigger if/when a critical 
+notification is processed from the Ondus API.
+
+NOTE: This plugin only reads data from the Ondus API - it never writes data back. The only exception
+to this approach is for valve control which can optionally be enabled in the plugin settings. In
+that case this plugin performs a HTTP POST request altering the state of the valve. No other data
+is changed. 
+
+WARNING: It is highly recommended to ONLY rely on the official Ondus App for stopping your
+water inlet valve in case of an emergency / flooding / pipe break. This service is meant
+as complementary to the official solution. As long as you never intentionally disabled
+something in the official Ondus app, you should be fine using this plugin.
+
 
 ### Added
 
+- A LeakSensor service has been added to each Sense Guard / Sense Plus / Sense. 
+- In total there are now 4 LeakSensor services.
+- Notification messages are always printed as warnings to the log until they have been read/erased in the Ondus App
+- Configured threshold limits from the Ondus App are printed to the logs
+
 ### Changed
 
-## [Released]
+- Improved error logging a bit if server responded with unknown response
+- Refactored code for minimal duplication
 
 ## [1.2.1] - 2020-08-21 
 
