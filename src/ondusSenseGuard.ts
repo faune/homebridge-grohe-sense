@@ -269,8 +269,6 @@ export class OndusSenseGuard extends OndusAppliance {
           }
 
           // Reset StatusFault characteristics for valve service
-          this.temperatureService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
-            this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
           this.valveService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
             this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
                 
