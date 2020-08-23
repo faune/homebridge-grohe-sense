@@ -30,7 +30,7 @@ export abstract class OndusAppliance {
 
   
   /**
-   * Ondus Sense abstract class
+   * OndusAppliance abstract constructor
    */
   constructor(
     public ondusPlatform: OndusPlatform,
@@ -87,6 +87,17 @@ export abstract class OndusAppliance {
       .on('get', this.handleCurrentTemperatureGet.bind(this));
 
 
+  }
+
+  /**
+   * This function is designed to start any custom action in addition
+   * to what is done in the constructor. Some child instances might
+   * require a bit different code for initial data query, and this
+   * will be problematic as the super constructor must be called
+   * regardless before functionality can start to be overloaded
+   */
+  start(): void {
+    return; 
   }
 
   // ---- HTTP HANDLER FUNCTIONS BELOW ----

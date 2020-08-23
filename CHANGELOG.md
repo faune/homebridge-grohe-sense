@@ -20,7 +20,7 @@ is changed.
 WARNING: It is highly recommended to ONLY rely on the official Ondus App for stopping your
 water inlet valve in case of an emergency / flooding / pipe break. This service is meant
 as complementary to the official solution. As long as you never intentionally disabled
-something in the official Ondus app, you should be fine.
+something in the official Ondus app, you should be fine using this plugin.
 
 
 ### Added
@@ -28,7 +28,7 @@ something in the official Ondus app, you should be fine.
 - A LeakSensor service has been added to each Sense Guard / Sense Plus / Sense. 
 - In total there are now 4 LeakSensor services.
 - Notification messages are always printed as warnings to the log until they have been read/erased in the Ondus App
-- Configured threshold limits are printed to the logs
+- Configured threshold limits from the Ondus App are printed to the logs
 
 ### Changed
 

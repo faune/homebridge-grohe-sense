@@ -1,30 +1,26 @@
 import { OndusAppliance } from './ondusAppliance';
 import { OndusThresholds } from './ondusThresholds';
 
+
 export const NOTIFICATION_CATEGORY_FIRMWARE = 10;
 export const NOTIFICATION_CATEGORY_WARNING = 20;
 export const NOTIFICATION_CATEGORY_CRITICAL = 30;
 
-interface Critical {
-  type: number,
-  message: string,
-}
 
-interface Notification {
-  category: Critical,
-  type: number,
-}
-
-
-
+/**
+ * Transform an appliance notification from the Ondus API into a 
+ * human-readable format. The constructed notification message will
+ * also including the relevant appliance metrics depending on the
+ * sensor state.
+ */
 export class OndusNotification {
+  private NOTIFICATION_MAP;
 
   thresholds: OndusThresholds;
 
-  private NOTIFICATION_MAP;
 
   /**
-    * Ondus Notification handler class
+    * OndusNotification constructor
     */
   constructor(
     private appliance: OndusAppliance,
@@ -88,7 +84,10 @@ export class OndusNotification {
    * instance data is inserted into the returned message
    */
   get() {
-    const notification = this.NOTIFICATION_MAP.category[this.category].type[this.type];
+    let notification = this.NOTIFICATION_MAP.category[this.category].type[this.type];
+    if (!notification) {
+      notification = `Unknown notification category=${this.category} type=${this.type}`;
+    }
     const message = `${this.timestamp} => ${notification}`;
     return message;
 

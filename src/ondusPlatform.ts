@@ -1,13 +1,10 @@
 import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge';
 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
+import { OndusSession } from './ondusSession'; // Ondus HTTP library
 import { OndusSense } from './ondusSense';
 import { OndusSensePlus } from './ondusSensePlus';
 import { OndusSenseGuard } from './ondusSenseGuard';
-
-
-// Ondus HTTP library
-import { OndusSession } from './ondusSession';
 
 
 /**
@@ -22,6 +19,10 @@ export class OndusPlatform implements DynamicPlatformPlugin {
 
   public ondusSession: OndusSession;
 
+
+  /**
+    * OndusPlatform constructor
+    */
   constructor(
     public readonly log: Logger,
     public readonly config: PlatformConfig,
@@ -159,15 +160,15 @@ export class OndusPlatform implements DynamicPlatformPlugin {
     switch(applianceInfo.type) {
       case OndusSense.ONDUS_TYPE:
         this.log.info(`Opening device handler "${OndusSense.ONDUS_NAME}" for "${applianceInfo.name}"`);
-        new OndusSense(this, locationID, roomID, accessory);
+        new OndusSense(this, locationID, roomID, accessory).start();
         break;
       case OndusSensePlus.ONDUS_TYPE:
         this.log.info(`Opening device handler "${OndusSensePlus.ONDUS_NAME}" for "${applianceInfo.name}"`);
-        new OndusSensePlus(this, locationID, roomID, accessory);
+        new OndusSensePlus(this, locationID, roomID, accessory).start();
         break;
       case OndusSenseGuard.ONDUS_TYPE:
         this.log.info(`Opening device handler "${OndusSenseGuard.ONDUS_NAME}" for "${applianceInfo.name}"`);
-        new OndusSenseGuard(this, locationID, roomID, accessory);
+        new OndusSenseGuard(this, locationID, roomID, accessory).start();
         break;
       default:
         this.log.warn(`Unsupported Ondus appliance type encountered: ${applianceInfo.type} - ignoring`);

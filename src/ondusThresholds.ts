@@ -1,6 +1,10 @@
 import { PlatformAccessory, Logger } from 'homebridge';
-    
 
+
+/**
+ * Extract and provide getter interfaces for any configured 
+ * appliance thresholds for an OndusAppliance instance 
+ */
 export class OndusThresholds {
 
   logPrefix: string;
@@ -66,55 +70,55 @@ export class OndusThresholds {
     this.logPrefix = this.accessory.context.device.name;
 
     // Find threshold limits
-    this.log.debug(`[${this.logPrefix}] Configured threshold limits:`);
+    this.log.info(`[${this.logPrefix}] Configured threshold limits:`);
 
     this.accessory.context.device.config['thresholds'].forEach(element => {
       if ((element.quantity === 'temperature') || (element.quantity === 'temperature_guard')) {
         if (element.type === 'min') {
           this.lowTempLimit = element.value;
           this.lowTempLimitEn = element.enabled;
-          this.log.debug(`[${this.logPrefix}] [${element.enabled ? '*':' '}] low temperature: ${this.lowTempLimit}˚C`);  
+          this.log.info(`[${this.logPrefix}] [${element.enabled ? '*':' '}] Temperature low: ${this.lowTempLimit}˚C`);  
         }
         if (element.type === 'max') {
           this.highTempLimit = element.value;
           this.highFlowLimitEn = element.enabled;
-          this.log.debug(`[${this.logPrefix}] [${element.enabled ? '*':' '}] high temperature: ${this.highTempLimit}˚C`);
+          this.log.info(`[${this.logPrefix}] [${element.enabled ? '*':' '}] Temperature high: ${this.highTempLimit}˚C`);
         }
       }
       if (element.quantity === 'humidity') {
         if (element.type === 'min') {
           this.lowHumidLimit = element.value;
           this.lowHumidLimitEn = element.enabled;
-          this.log.debug(`[${this.logPrefix}] [${element.enabled ? '*':' '}] low humidity: ${this.lowHumidLimit}% RF`);
+          this.log.info(`[${this.logPrefix}] [${element.enabled ? '*':' '}] Humidity low: ${this.lowHumidLimit}% RF`);
         }
         if (element.type === 'max') {
           this.highHumidLimit = element.value;
           this.highHumidLimitEn = element.enabled;
-          this.log.debug(`[${this.logPrefix}] [${element.enabled ? '*':' '}] high humidity: ${this.highHumidLimit}% RF`);
+          this.log.info(`[${this.logPrefix}] [${element.enabled ? '*':' '}] Humidity high: ${this.highHumidLimit}% RF`);
         }
       }
       if (element.quantity === 'flowrate') {
         if (element.type === 'min') {
           this.lowFlowLimit = element.value;
           this.lowFlowLimitEn = element.enabled;
-          this.log.debug(`[${this.logPrefix}] [${element.enabled ? '*':' '}] low flowrate: ${this.lowFlowLimit}`);
+          this.log.info(`[${this.logPrefix}] [${element.enabled ? '*':' '}] Flowrate low: ${this.lowFlowLimit}`);
         }
         if (element.type === 'max') {
           this.highFlowLimit = element.value;
           this.highFlowLimitEn = element.enabled;
-          this.log.debug(`[${this.logPrefix}] [${element.enabled ? '*':' '}] high flowrate: ${this.highFlowLimit}`);
+          this.log.info(`[${this.logPrefix}] [${element.enabled ? '*':' '}] Flowrate high: ${this.highFlowLimit}`);
         }
       }
       if (element.quantity === 'pressure') {
         if (element.type === 'min') {
           this.lowPressureLimit = element.value;
           this.lowPressureLimitEn = element.enabled;
-          this.log.debug(`[${this.logPrefix}] [${element.enabled ? '*':' '}] low pressure: ${this.lowPressureLimit} bar`);
+          this.log.info(`[${this.logPrefix}] [${element.enabled ? '*':' '}] Pressure low: ${this.lowPressureLimit} bar`);
         }
         if (element.type === 'max') {
           this.highPressureLimit = element.value;
           this.highPressureLimitEn = element.enabled;  
-          this.log.debug(`[${this.logPrefix}] [${element.enabled ? '*':' '}] high pressure: ${this.highPressureLimit} bar`);
+          this.log.info(`[${this.logPrefix}] [${element.enabled ? '*':' '}] Pressure high: ${this.highPressureLimit} bar`);
         }
       }
     });

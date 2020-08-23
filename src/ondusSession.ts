@@ -1,7 +1,18 @@
 import { Logger, PlatformConfig } from 'homebridge';
+
 import superagent from 'superagent';
 import cheerio from 'cheerio';
 
+
+/**
+ * One instance of this class is created by OndusPlatform and shared between
+ * all Ondus appliance instances in order to communicate with the Ondus API.
+ * 
+ * In general methods in this instance contain no logic for data query.
+ * This logic is rather applied in the Ondus appliance instances instead
+ * and the OndusSession instance provide helper methods for performing the 
+ * neccessary queries.
+ */
 export class OndusSession {
 
   log: Logger;
@@ -39,7 +50,7 @@ export class OndusSession {
       this.username = config['username'];
     }
     if (this.config['password']) {
-      this.log.debug('password: ', '<secret>');//this.config['password']);
+      this.log.debug('password: ', '<secret>');
       this.password = this.config['password'];
     }
   }

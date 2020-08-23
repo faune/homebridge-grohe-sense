@@ -4,13 +4,18 @@ import { OndusPlatform } from './ondusPlatform';
 import { OndusAppliance } from './ondusAppliance';
 
 
-
-
-
 /**
- * Platform Accessory
- * An instance of this class is created for each accessory your platform registers
- * Each accessory may expose multiple services of different service types.
+ * Grohe Sense Guard Accessory for the Ondus platform
+ * 
+ * This accessory exposes the following services:
+ * - Temperature
+ * - Leakage
+ * - Valve 
+ * 
+ * In addition the following metrics are logged, but not exposed in HomeKit:
+ * - Water pressure
+ * - Water flowrate 
+ * 
  */
 export class OndusSenseGuard extends OndusAppliance {
   static ONDUS_TYPE = 103;
@@ -29,6 +34,8 @@ export class OndusSenseGuard extends OndusAppliance {
  
   /**
    * Ondus Sense Guard constructor for mains powered water control valve
+   * 
+   * Inherrits all common sensor handling from OndusAppliance
    */
   constructor(
     public ondusPlatform: OndusPlatform,
@@ -63,7 +70,7 @@ export class OndusSenseGuard extends OndusAppliance {
      * Active=1, InUse=1 -> Running
      * Active=0, InUse=1 -> Stopping
      */
-    
+
     // get the Valve service if it exists, otherwise create a new Valve service
     this.valveService = this.accessory.getService(this.ondusPlatform.Service.Valve) ||
       this.accessory.addService(this.ondusPlatform.Service.Valve);
@@ -83,7 +90,7 @@ export class OndusSenseGuard extends OndusAppliance {
 
 
   }
-  
+
   // ---- HTTP HANDLER FUNCTIONS BELOW ----
 
   /**
