@@ -5,6 +5,18 @@ export const NOTIFICATION_CATEGORY_FIRMWARE = 10;
 export const NOTIFICATION_CATEGORY_WARNING = 20;
 export const NOTIFICATION_CATEGORY_CRITICAL = 30;
 
+interface Critical {
+  type: number,
+  message: string,
+}
+
+interface Notification {
+  category: Critical,
+  type: number,
+}
+
+
+
 export class OndusNotification {
 
   thresholds: OndusThresholds;
@@ -15,27 +27,29 @@ export class OndusNotification {
     * Ondus Notification handler class
     */
   constructor(
-      private category: number,
-      private type: number,
-      private timestamp: string,
-      private appliance: OndusAppliance,
+    private appliance: OndusAppliance,
+    private category: number,
+    private type: number,
+    private timestamp: string,
   ) {
     this.category = category;
     this.type = type;
     this.timestamp = timestamp;
     this.appliance = appliance;
-    this.thresholds = appliance.thresholds;
+    this.thresholds = this.appliance.thresholds;
 
     // The Ondus API returns notification information as a {category: type}
     this.NOTIFICATION_MAP = {
       'category' : {
+        // NOTIFICATION_CATEGORY_FIRMWARE
         10 : {
           'type'  : {
             60  : 'Firmware update available',
             460 : 'Firmware update available',
           },  
         },
-        NOTIFICATION_CATEGORY_WARNING : {
+        // NOTIFICATION_CATEGORY_WARNING
+        20 : {
           'type' : {
             11  : `Battery is at critical level: ${this.appliance['currentBatteryLevel']}%`,
             12  : 'Battery is empty and must be changed',
@@ -52,7 +66,8 @@ export class OndusNotification {
             380 : 'Lost WiFi',
           },
         },
-        /* CATEGORY 30 is the most severe, and notifications in this category will always trigger leakServices */
+        // NOTIFICATION_CATEGORY_CRITICAL
+        /* Notifications in this category will always trigger leakServices */
         30 : {
           'type' : {
             0   : 'Flooding detected - water has been SHUT OFF',
@@ -68,7 +83,11 @@ export class OndusNotification {
 
   }
 
-  getNotification() {
+  /**
+   * Generate a formatted string for this Ondus appliance instance where correct
+   * instance data is inserted into the returned message
+   */
+  get() {
     const notification = this.NOTIFICATION_MAP.category[this.category].type[this.type];
     const message = `${this.timestamp} => ${notification}`;
     return message;

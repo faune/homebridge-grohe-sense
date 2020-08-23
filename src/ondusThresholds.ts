@@ -31,7 +31,7 @@ export class OndusThresholds {
   ) {
 
     this.log = log;
-    this.logPrefix = 'Thresholds';
+    this.logPrefix = '';
     this.accessory = accessory;
 
     // Set all threshold limits to default value
@@ -62,8 +62,11 @@ export class OndusThresholds {
    */
   public update() {
     
+    // Use the name of the accessory being processed as log prefix
+    this.logPrefix = this.accessory.context.device.name;
+
     // Find threshold limits
-    this.log.debug(`[${this.logPrefix}] Configured limits:`);
+    this.log.debug(`[${this.logPrefix}] Configured threshold limits:`);
 
     this.accessory.context.device.config['thresholds'].forEach(element => {
       if ((element.quantity === 'temperature') || (element.quantity === 'temperature_guard')) {

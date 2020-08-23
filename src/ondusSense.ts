@@ -122,10 +122,9 @@ export class OndusSense extends OndusAppliance {
   }
 
   
-  
-  
-  
+  // ---- HTTP HANDLER FUNCTIONS BELOW ----
 
+  
   /**
    * Handle requests to get the current value of the "Current Relative Humidity" characteristic
    */
@@ -151,6 +150,8 @@ export class OndusSense extends OndusAppliance {
       this.ondusPlatform.Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW);
   }
 
+
+  // ---- ONDUS API FUNCTIONS BELOW ----
 
 
   /**
@@ -197,8 +198,8 @@ export class OndusSense extends OndusAppliance {
         this.currentTemperature = lastMeasurement.temperature;
         this.currentHumidity = lastMeasurement.humidity;
         this.ondusPlatform.log.info(`[${this.logPrefix}] Timestamp: ${this.currentTimestamp}`);
-        this.ondusPlatform.log.info(`[${this.logPrefix}] - Temperature: ${this.currentTemperature}˚C`);
-        this.ondusPlatform.log.info(`[${this.logPrefix}] - Humidity: ${this.currentHumidity}% RF`);
+        this.ondusPlatform.log.info(`[${this.logPrefix}] => Temperature: ${this.currentTemperature}˚C`);
+        this.ondusPlatform.log.info(`[${this.logPrefix}] => Humidity: ${this.currentHumidity}% RF`);
 
         // Reset StatusFault characteristics temperature and humidity service
         [this.temperatureService, this.humidityService].forEach( service => {
@@ -246,9 +247,9 @@ export class OndusSense extends OndusAppliance {
           }
         });
       
-        this.ondusPlatform.log.info(`[${this.logPrefix}] - Battery: ${this.currentBatteryLevel}%`);
-        this.ondusPlatform.log.info(`[${this.logPrefix}] - WiFi quality: ${this.currentWiFiQuality}`);
-        this.ondusPlatform.log.info(`[${this.logPrefix}] - Connection: ${this.currentConnection}`);
+        this.ondusPlatform.log.info(`[${this.logPrefix}] => Battery: ${this.currentBatteryLevel}%`);
+        this.ondusPlatform.log.info(`[${this.logPrefix}] => WiFi quality: ${this.currentWiFiQuality}`);
+        this.ondusPlatform.log.info(`[${this.logPrefix}] => Connection: ${this.currentConnection}`);
 
         // Reset StatusFault characteristics for battery service
         if (this.batteryService) {

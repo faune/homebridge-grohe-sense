@@ -63,6 +63,7 @@ export class OndusSenseGuard extends OndusAppliance {
      * Active=1, InUse=1 -> Running
      * Active=0, InUse=1 -> Stopping
      */
+    
     // get the Valve service if it exists, otherwise create a new Valve service
     this.valveService = this.accessory.getService(this.ondusPlatform.Service.Valve) ||
       this.accessory.addService(this.ondusPlatform.Service.Valve);
@@ -83,6 +84,7 @@ export class OndusSenseGuard extends OndusAppliance {
 
   }
   
+  // ---- HTTP HANDLER FUNCTIONS BELOW ----
 
   /**
    * Handle requests to get the current value of the "Current Temperature" characteristic
@@ -156,6 +158,9 @@ export class OndusSenseGuard extends OndusAppliance {
   
   }
 
+  // ---- ONDUS API FUNCTIONS BELOW ----
+
+
   /**
   * Fetch Ondus Sense Guard measurement data. Returns a promise that will be resolved
    * once measurement data has been queried from the Ondus API.
@@ -203,10 +208,10 @@ export class OndusSenseGuard extends OndusAppliance {
           this.currentTemperature = lastMeasurement.temperature_guard;
           const valveState = this.currentValveState === OndusSenseGuard.VALVE_OPEN? 'Open': 'Closed';
           this.ondusPlatform.log.info(`[${this.logPrefix}] Timestamp: ${this.currentTimestamp}`);          
-          this.ondusPlatform.log.info(`[${this.logPrefix}] - Valve: ${valveState}`);
-          this.ondusPlatform.log.info(`[${this.logPrefix}] - Flowrate: ${this.currentFlowRate}`);
-          this.ondusPlatform.log.info(`[${this.logPrefix}] - Pressure: ${this.currentPressure} bar`);
-          this.ondusPlatform.log.info(`[${this.logPrefix}] - Temperature: ${this.currentTemperature}˚C`);
+          this.ondusPlatform.log.info(`[${this.logPrefix}] => Valve: ${valveState}`);
+          this.ondusPlatform.log.info(`[${this.logPrefix}] => Flowrate: ${this.currentFlowRate}`);
+          this.ondusPlatform.log.info(`[${this.logPrefix}] => Pressure: ${this.currentPressure} bar`);
+          this.ondusPlatform.log.info(`[${this.logPrefix}] => Temperature: ${this.currentTemperature}˚C`);
 
           // Reset StatusFault characteristics for temperature service
           this.temperatureService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 

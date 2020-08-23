@@ -2,7 +2,7 @@ import { PlatformAccessory, Service } from 'homebridge';
 
 import { OndusPlatform } from './ondusPlatform';
 import { OndusThresholds } from './ondusThresholds';
-import { OndusNotification, NOTIFICATION_CATEGORY_CRITICAL, NOTIFICATION_CATEGORY_WARNING} from './ondusNotification';
+import { OndusNotification, NOTIFICATION_CATEGORY_CRITICAL } from './ondusNotification';
 
 
 /**
@@ -89,28 +89,8 @@ export abstract class OndusAppliance {
 
   }
 
-  public getLocationID() {
-    return this.locationID;
-  }
+  // ---- HTTP HANDLER FUNCTIONS BELOW ----
 
-  public getRoomID() {
-    return this.roomID;
-  }
-
-  public getApplianceID() {
-    return this.applianceID;
-  }
-
-  /**
-   * Utility functions
-   */
-  public unhexlify(str: string) {
-    let result = '';
-    for (let i=0, l=str.length; i<l; i+=2) {
-      result += String.fromCharCode(parseInt(str.substr(i, 2), 16));
-    }
-    return result;
-  }
 
   /**
    * Handle requests to get the current value of the "LeakDetected" characteristics
@@ -147,14 +127,14 @@ export abstract class OndusAppliance {
 
         // Iterate over all notifications for this accessory
         res.body.forEach(element => {
-          if (element.category === NOTIFICATION_CATEGORY_WARNING ) {
+          if (element.category === NOTIFICATION_CATEGORY_CRITICAL ) {
             // Check if notifications contained one or more category critical messages.
             // If this is the case a leakage has been detected
             this.leakDetected = true;
           }
           // Log each notification message regardless of category. These messages will be 
           // encountered and logged until they are marked as read in the Ondus mobile app
-          const notification = new OndusNotification(element.category, element.type, element.timestamp, this).getNotification();
+          const notification = new OndusNotification(this, element.category, element.type, element.timestamp).get();
           this.ondusPlatform.log.warn(`[${this.logPrefix}] ${notification}`);
         });
 
@@ -187,6 +167,8 @@ export abstract class OndusAppliance {
 
   /**
    * Handle requests to get the current value of the "Current Temperature" characteristic
+   * 
+   * This function should be overloaded depending on the strategy for fetching new temperature data
    */
   handleCurrentTemperatureGet(callback) {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET CurrentTemperature`);
@@ -194,9 +176,32 @@ export abstract class OndusAppliance {
   }
 
  
- 
+  // ---- UTILITY FUNCTIONS BELOW ----
+
+  /**
+   * Convert decimal encoded HEX string to hexadecimal encoded HEX string 
+   */
+  public unhexlify(str: string) {
+    let result = '';
+    for (let i=0, l=str.length; i<l; i+=2) {
+      result += String.fromCharCode(parseInt(str.substr(i, 2), 16));
+    }
+    return result;
+  }
  
   // ---- HELPER FUNCTIONS BELOW HANDLING ONDUS IDs AUTOMATICALLY ----
+
+  public getLocationID() {
+    return this.locationID;
+  }
+
+  public getRoomID() {
+    return this.roomID;
+  }
+
+  public getApplianceID() {
+    return this.applianceID;
+  }
 
   /**
    * Retrieve appliance info like appliance ID, type, and name as a JSON object 
