@@ -82,29 +82,6 @@ export class OndusSense extends OndusSensePlus {
       .on('get', this.handleStatusLowBatteryGet.bind(this));
   }
 
-
-  start() {
-    // Fetch initial sensor data from Ondus API on startup
-    this.getMeasurements();
-    this.getStatus();
-    
-    // Start timer for fetching updated values from Ondus API once every refresh_interval from now on
-    // The reason is that sensors only report new data once every day, so no point in querying Ondus API often
-    let refreshInterval = this.ondusPlatform.config['refresh_interval'] * 1000;
-    if (!refreshInterval) {
-      // eslint-disable-next-line max-len
-      this.ondusPlatform.log.warn(`[${this.logPrefix}] Refresh interval incorrectly configured in config.json - using default value of 3600 seconds`);
-      refreshInterval = 3600000;
-    }
-    setInterval( () => { 
-      // Make sure accessory context device has the latest appliance info
-      this.updateApplianceInfo(); 
-      // Fetch new data
-      this.getMeasurements();
-      this.getStatus();
-    }, refreshInterval);
-  }
-
   
   // ---- HTTP HANDLER FUNCTIONS BELOW ----
 
