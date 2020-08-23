@@ -83,7 +83,7 @@ export class OndusNotification {
    * Generate a formatted string for this Ondus appliance instance where correct
    * instance data is inserted into the returned message
    */
-  get() {
+  getNotification() {
     let notification = this.NOTIFICATION_MAP.category[this.category].type[this.type];
     if (!notification) {
       notification = `Unknown notification category=${this.category} type=${this.type}`;

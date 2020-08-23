@@ -145,7 +145,7 @@ export abstract class OndusAppliance {
           }
           // Log each notification message regardless of category. These messages will be 
           // encountered and logged until they are marked as read in the Ondus mobile app
-          const notification = new OndusNotification(this, element.category, element.type, element.timestamp).get();
+          const notification = new OndusNotification(this, element.category, element.type, element.timestamp).getNotification();
           this.ondusPlatform.log.warn(`[${this.logPrefix}] ${notification}`);
         });
 
