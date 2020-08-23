@@ -25,6 +25,11 @@ The following Grohe Sense components are supported:
   * Sense battery powered water leakage detector
   * Sense Plus mains powered water leakage detector
 
+## Screenshot
+
+![Grohe Sense Guard sensor layout](https://raw.githubusercontent.com/faune/homebridge-grohe-sense/master/img/sensors.png "Grohe Sense Guard sensor layout")
+
+
 ## Download
 
 Released versions are published through npm and can be found here:
