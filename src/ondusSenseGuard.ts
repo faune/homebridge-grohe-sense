@@ -49,15 +49,6 @@ export class OndusSenseGuard extends OndusAppliance {
     this.currentValveState = OndusSenseGuard.VALVE_OPEN;
     this.currentFlowRate = 0;
     this.currentPressure = 0;
-
-    // set accessory information
-    this.accessory.getService(this.ondusPlatform.Service.AccessoryInformation)!
-      .setCharacteristic(this.ondusPlatform.Characteristic.Manufacturer, OndusSenseGuard.ONDUS_PROD)
-      .setCharacteristic(this.ondusPlatform.Characteristic.Model, OndusSenseGuard.ONDUS_NAME)
-      .setCharacteristic(this.ondusPlatform.Characteristic.HardwareRevision, accessory.context.device.type)
-      .setCharacteristic(this.ondusPlatform.Characteristic.SerialNumber, this.unhexlify(accessory.context.device.serial_number))
-      .setCharacteristic(this.ondusPlatform.Characteristic.FirmwareRevision, accessory.context.device.version)
-      .setCharacteristic(this.ondusPlatform.Characteristic.AppMatchingIdentifier, '1451814256');
       
     // Initialize extended sensor services
 
@@ -90,6 +81,21 @@ export class OndusSenseGuard extends OndusAppliance {
 
 
   }
+
+
+  // ---- CHARACTERISTICS HANDLER FUNCTIONS BELOW ----
+
+
+  setValveServiceStatusFault(active: boolean) {
+    if (active) {
+      this.valveService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
+        this.ondusPlatform.Characteristic.StatusFault.GENERAL_FAULT);
+    } else {
+      this.valveService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
+        this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
+    }
+  }
+
 
   // ---- HTTP HANDLER FUNCTIONS BELOW ----
 
@@ -220,9 +226,8 @@ export class OndusSenseGuard extends OndusAppliance {
           this.ondusPlatform.log.info(`[${this.logPrefix}] => Pressure: ${this.currentPressure} bar`);
           this.ondusPlatform.log.info(`[${this.logPrefix}] => Temperature: ${this.currentTemperature}˚C`);
 
-          // Reset StatusFault characteristics for temperature service
-          this.temperatureService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
-            this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
+          // Enable Active characteristics for temperature service
+          this.setTemperatureServiceActive(true);
           
           // Resolve promise to handleCurrentTemperatureGet()
           resolve(this.currentTemperature);
@@ -230,10 +235,9 @@ export class OndusSenseGuard extends OndusAppliance {
         .catch( err => {
           this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to update temperature: ${err}`);
         
-          // Set StatusFault characteristics for temperature service
-          this.temperatureService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
-            this.ondusPlatform.Characteristic.StatusFault.GENERAL_FAULT);
-
+          // Disable Active characteristics for temperature service
+          this.setTemperatureServiceActive(false);
+          
           // Reject promise to handleCurrentTemperatureGet() and return last known temperature
           reject(this.currentTemperature);
         });
@@ -268,20 +272,12 @@ export class OndusSenseGuard extends OndusAppliance {
               this.ondusPlatform.Characteristic.InUse.NOT_IN_USE);
           }
 
-          // Reset StatusFault characteristics for valve service
-          this.valveService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
-            this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
-                
           // Resolve promise to handleActiveGet()
           resolve(this.currentValveState);
         })
         .catch(err => {
           this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to retrieve main water inlet valve state: ${err}`);
 
-          // Set StatusFault characteristics for temperature and valve service
-          this.valveService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
-            this.ondusPlatform.Characteristic.StatusFault.GENERAL_FAULT);
-          
           // Resolve promise to handleActiveGet() and return last known valve state
           reject(this.currentValveState);
         });
@@ -330,20 +326,12 @@ export class OndusSenseGuard extends OndusAppliance {
               this.ondusPlatform.Characteristic.InUse.NOT_IN_USE);
           }
 
-          // Reset StatusFault characteristics for valve service
-          this.valveService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
-            this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
-
           // Resolve promise to handleActiveSet()
           resolve(this.currentValveState);
         })
         .catch(err => {
           //this.ondusPlatform.log.debug('err:', err);
           this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to retrieve valve state: ${err}`);
-
-          // Set StatusFault characteristics for valve service
-          this.valveService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
-            this.ondusPlatform.Characteristic.StatusFault.GENERAL_FAULT);
 
           // Reject promise to handleActiveSet() and return last known valve state
           reject(this.currentValveState);

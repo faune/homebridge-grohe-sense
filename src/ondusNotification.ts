@@ -76,9 +76,37 @@ export class OndusNotification {
       },
     };
 
-
+    switch(this.category) {
+      case NOTIFICATION_CATEGORY_CRITICAL:
+        this.appliance.setLeakServiceLeakDetected(true);
+        break;
+      case NOTIFICATION_CATEGORY_WARNING:
+        switch(this.type) {
+          case 20:
+          case 21:
+            this.appliance.setTemperatureServiceStatusFault(true);
+            break;
+          case 30:
+          case 31:
+            if (this.appliance['setHumidityServiceStatusFault']) {
+              this.appliance['setHumidityServiceStatusFault'](true);
+            }
+            break;
+          case 40:
+          case 340:
+            this.appliance.setTemperatureServiceStatusFault(true);
+            break;
+          case 320:
+          case 321:
+          case 330:
+            this.appliance.setLeakServiceStatusFault(true);
+            break;
+            
+        }
+        break;
+    }
   }
-
+  
   /**
    * Generate a formatted string for this Ondus appliance instance where correct
    * instance data is inserted into the returned message

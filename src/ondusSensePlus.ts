@@ -18,6 +18,7 @@ import { OndusPlatform } from './ondusPlatform';
  * - Connection 
  * 
  */
+
 export class OndusSensePlus extends OndusAppliance {
   static ONDUS_TYPE = 102;
   static ONDUS_NAME = 'Sense Plus';
@@ -49,15 +50,6 @@ export class OndusSensePlus extends OndusAppliance {
     this.currentWiFiQuality = 0;
     this.currentConnection = 0;
 
-    // set accessory information
-    this.accessory.getService(this.ondusPlatform.Service.AccessoryInformation)!
-      .setCharacteristic(this.ondusPlatform.Characteristic.Manufacturer, OndusSensePlus.ONDUS_PROD)
-      .setCharacteristic(this.ondusPlatform.Characteristic.Model, OndusSensePlus.ONDUS_NAME)
-      .setCharacteristic(this.ondusPlatform.Characteristic.Name, accessory.context.device.name)
-      .setCharacteristic(this.ondusPlatform.Characteristic.HardwareRevision, accessory.context.device.type)
-      .setCharacteristic(this.ondusPlatform.Characteristic.SerialNumber, this.unhexlify(accessory.context.device.serial_number))
-      .setCharacteristic(this.ondusPlatform.Characteristic.FirmwareRevision, accessory.context.device.version)
-      .setCharacteristic(this.ondusPlatform.Characteristic.AppMatchingIdentifier, '1451814256');
 
     // Initialize extended sensor services
 
@@ -72,6 +64,7 @@ export class OndusSensePlus extends OndusAppliance {
     // set the Humidity service characteristics
     this.humidityService
       .setCharacteristic(this.ondusPlatform.Characteristic.Name, accessory.context.device.name)
+      .setCharacteristic(this.ondusPlatform.Characteristic.Active, this.ondusPlatform.Characteristic.Active.ACTIVE)
       .setCharacteristic(this.ondusPlatform.Characteristic.StatusFault, this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
 
     // create handlers for required characteristics for Humidity service
@@ -102,7 +95,31 @@ export class OndusSensePlus extends OndusAppliance {
     }, refreshInterval);
   }
 
-  
+
+  // ---- CHARACTERISTICS HANDLER FUNCTIONS BELOW ----
+
+
+  setHumidityServiceActive(active: boolean) {
+    if (active) {
+      this.humidityService.updateCharacteristic(this.ondusPlatform.Characteristic.Active, 
+        this.ondusPlatform.Characteristic.Active.ACTIVE);
+    } else {
+      this.humidityService.updateCharacteristic(this.ondusPlatform.Characteristic.Active, 
+        this.ondusPlatform.Characteristic.Active.INACTIVE);      
+    }
+  }
+
+  setHumidityServiceStatusFault(active: boolean) {
+    if (active) {
+      this.humidityService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
+        this.ondusPlatform.Characteristic.StatusFault.GENERAL_FAULT);
+    } else {
+      this.humidityService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
+        this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);      
+    }
+  }
+
+
   // ---- HTTP HANDLER FUNCTIONS BELOW ----
 
 
@@ -165,20 +182,16 @@ export class OndusSensePlus extends OndusAppliance {
         this.ondusPlatform.log.info(`[${this.logPrefix}] => Temperature: ${this.currentTemperature}˚C`);
         this.ondusPlatform.log.info(`[${this.logPrefix}] => Humidity: ${this.currentHumidity}% RF`);
 
-        // Reset StatusFault characteristics temperature and humidity service
-        [this.temperatureService, this.humidityService].forEach( service => {
-          service.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
-            this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
-        });
+        // Enable Active characteristics for temperature and humidity service
+        this.setTemperatureServiceActive(true);
+        this.setHumidityServiceActive(true);
       })
       .catch( err => {
         this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to update temperature and humidity: ${err}`);
 
-        // Set StatusFault characteristics temperature and humidity service
-        [this.temperatureService, this.humidityService].forEach( service => {
-          service.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
-            this.ondusPlatform.Characteristic.StatusFault.GENERAL_FAULT);
-        });
+        // Disable Active characteristics for temperature and humidity service
+        this.setTemperatureServiceActive(false);
+        this.setHumidityServiceActive(false);
       });
   }
 

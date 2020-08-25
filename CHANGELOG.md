@@ -11,11 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The Active characteristics have been added to all appliances
+- The StatusFault characteristics have been added to all appliances
+- If network error towards Ondus API is encountered the Active characteristics will be set to Inactive
+- If a configured threshold for an appliance is exceeded, the StatusFault characteristics will be triggered. This will remain set until warning message is cleared in Ondus App.
+
 ### Changed
 
 - Removed duplicate OndusSense start() code
 - TemperatureSensor characteristics were incorrectly updated from valve control 
-
+- Re-factoring completed
 
 ## [Released]
 

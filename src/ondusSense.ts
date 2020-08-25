@@ -46,15 +46,7 @@ export class OndusSense extends OndusSensePlus {
     // Set extended sensor data to default values
     this.currentBatteryLevel = 0;
 
-    // set accessory information
-    this.accessory.getService(this.ondusPlatform.Service.AccessoryInformation)!
-      .setCharacteristic(this.ondusPlatform.Characteristic.Manufacturer, OndusSense.ONDUS_PROD)
-      .setCharacteristic(this.ondusPlatform.Characteristic.Model, OndusSense.ONDUS_NAME)
-      .setCharacteristic(this.ondusPlatform.Characteristic.Name, accessory.context.device.name)
-      .setCharacteristic(this.ondusPlatform.Characteristic.HardwareRevision, accessory.context.device.type)
-      .setCharacteristic(this.ondusPlatform.Characteristic.SerialNumber, this.unhexlify(accessory.context.device.serial_number))
-      .setCharacteristic(this.ondusPlatform.Characteristic.FirmwareRevision, accessory.context.device.version)
-      .setCharacteristic(this.ondusPlatform.Characteristic.AppMatchingIdentifier, '1451814256');
+    
 
     // Initialize extended sensor services
 
@@ -73,7 +65,8 @@ export class OndusSense extends OndusSensePlus {
     this.batteryService
       .setCharacteristic(this.ondusPlatform.Characteristic.Name, accessory.context.device.name)
       .setCharacteristic(this.ondusPlatform.Characteristic.ChargingState, this.ondusPlatform.Characteristic.ChargingState.NOT_CHARGEABLE)
-      .setCharacteristic(this.ondusPlatform.Characteristic.StatusFault, this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
+      .setCharacteristic(this.ondusPlatform.Characteristic.StatusLowBattery, 
+        this.ondusPlatform.Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL);
 
     // create handlers for required characteristics of Battery service
     this.batteryService.getCharacteristic(this.ondusPlatform.Characteristic.BatteryLevel)
@@ -82,7 +75,7 @@ export class OndusSense extends OndusSensePlus {
       .on('get', this.handleStatusLowBatteryGet.bind(this));
   }
 
-  
+
   // ---- HTTP HANDLER FUNCTIONS BELOW ----
 
   /**
@@ -131,17 +124,9 @@ export class OndusSense extends OndusSensePlus {
         this.ondusPlatform.log.info(`[${this.logPrefix}] => Battery: ${this.currentBatteryLevel}%`);
         this.ondusPlatform.log.info(`[${this.logPrefix}] => WiFi quality: ${this.currentWiFiQuality}`);
         this.ondusPlatform.log.info(`[${this.logPrefix}] => Connection: ${this.currentConnection}`);
-
-        // Reset StatusFault characteristics for battery service
-        this.batteryService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
-          this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
       })
       .catch(err => {
         this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to update device status: ${err}`);
-        
-        // Set StatusFault characteristics for battery service
-        this.batteryService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
-          this.ondusPlatform.Characteristic.StatusFault.GENERAL_FAULT);  
       });
   }
 }

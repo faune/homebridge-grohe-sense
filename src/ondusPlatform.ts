@@ -174,7 +174,5 @@ export class OndusPlatform implements DynamicPlatformPlugin {
         this.log.warn(`Unsupported Ondus appliance type encountered: ${applianceInfo.type} - ignoring`);
         return;
     }
-
-  
   }
 }
