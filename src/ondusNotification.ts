@@ -58,6 +58,7 @@ export class OndusNotification {
             320 : 'Unusual water consumption detected - water has been SHUT OFF',
             321 : 'Unusual water consumption detected - water still ON',
             330 : 'Micro leakage detected',
+            332 : 'Micro leakage detected over several days', // Unsure if this is correct?
             340 : `Frost warning! Current temperature is ${this.appliance.currentTemperature}˚C`,
             380 : 'Lost WiFi',
           },
@@ -99,6 +100,7 @@ export class OndusNotification {
           case 320:
           case 321:
           case 330:
+          case 332:
             this.appliance.setLeakServiceStatusFault(true);
             break;
             

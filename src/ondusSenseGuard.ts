@@ -83,6 +83,12 @@ export class OndusSenseGuard extends OndusAppliance {
   }
 
 
+  resetAllStatusFaults() {
+    this.setLeakServiceStatusFault(false);
+    this.setTemperatureServiceStatusFault(false);
+    this.setValveServiceStatusFault(false);
+  }
+
   // ---- CHARACTERISTICS HANDLER FUNCTIONS BELOW ----
 
 

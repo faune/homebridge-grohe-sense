@@ -57,7 +57,7 @@ export class OndusSense extends OndusSensePlus {
      * and not Sense Plus which is mains powered
      */
       
-    // create handlers for battery characteristics for Temperature and Humidity service
+    // create handlers for battery characteristics for Battery service
     this.batteryService = this.accessory.getService(this.ondusPlatform.Service.BatteryService) || 
       this.accessory.addService(this.ondusPlatform.Service.BatteryService);
     

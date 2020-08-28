@@ -95,6 +95,11 @@ export class OndusSensePlus extends OndusAppliance {
     }, refreshInterval);
   }
 
+  resetAllStatusFaults() {
+    this.setLeakServiceStatusFault(false);
+    this.setTemperatureServiceStatusFault(false);
+    this.setHumidityServiceStatusFault(false);
+  }
 
   // ---- CHARACTERISTICS HANDLER FUNCTIONS BELOW ----
 

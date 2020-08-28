@@ -121,6 +121,14 @@ export abstract class OndusAppliance {
     return; 
   }
 
+  /**
+   * This function must be overloaded in order to reset
+   * all appliance StatusFault characteristics
+   */
+  resetAllStatusFaults() {
+    this.setLeakServiceStatusFault(false);
+    this.setTemperatureServiceStatusFault(false);
+  }
 
   // ---- CHARACTERISTICS HANDLER FUNCTIONS BELOW ----
 
@@ -201,28 +209,29 @@ export abstract class OndusAppliance {
     this.getApplianceNotifications()
       .then( res => {
 
-        // Reset leakDetected before parsing notifications
+        // Reset all status fault characteristics before parsing new notifications
         this.leakDetected = false;
+        this.resetAllStatusFaults();
 
         // Log number of pending notifications
-        if (res.body.length > 0) {
-          this.ondusPlatform.log.debug(`[${this.logPrefix}] Processing ${res.body.length} notifications ...`);
+        if (res.body.length === 0) {
+          this.ondusPlatform.log.info(`[${this.logPrefix}] No pending notifications`);
         } else {
-          this.ondusPlatform.log.debug(`[${this.logPrefix}] No pending notifications`);
-        }
+          this.ondusPlatform.log.info(`[${this.logPrefix}] Processing ${res.body.length} notifications ...`);
 
-        // Iterate over all notifications for this accessory
-        res.body.forEach(element => {
-          if (element.category === NOTIFICATION_CATEGORY_CRITICAL ) {
-            // Check if notifications contained one or more category critical messages.
-            // If this is the case a leakage has been detected
-            this.leakDetected = true;
-          }
-          // Log each notification message regardless of category. These messages will be 
-          // encountered and logged until they are marked as read in the Ondus mobile app
-          const notification = new OndusNotification(this, element.category, element.type, element.timestamp).getNotification();
-          this.ondusPlatform.log.warn(`[${this.logPrefix}] ${notification}`);
-        });
+          // Iterate over all notifications for this accessory
+          res.body.forEach(element => {
+            if (element.category === NOTIFICATION_CATEGORY_CRITICAL ) {
+              // Check if notifications contained one or more category critical messages.
+              // If this is the case a leakage has been detected
+              this.leakDetected = true;
+            }
+            // Log each notification message regardless of category. These messages will be 
+            // encountered and logged until they are marked as read in the Ondus mobile app
+            const notification = new OndusNotification(this, element.category, element.type, element.timestamp).getNotification();
+            this.ondusPlatform.log.warn(`[${this.logPrefix}] ${notification}`);
+          });
+        }
 
         // Update the leakService LeakDetected characteristics
         this.setLeakServiceLeakDetected(this.leakDetected);
