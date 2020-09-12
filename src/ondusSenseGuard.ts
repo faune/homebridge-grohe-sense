@@ -84,7 +84,9 @@ export class OndusSenseGuard extends OndusAppliance {
 
 
   start() {
-    this.getHistoricalMeasurements();
+    if (this.historyService) {
+      this.getHistoricalMeasurements();
+    }
   }
 
 
@@ -217,9 +219,9 @@ export class OndusSenseGuard extends OndusAppliance {
 
 
   /**
-   * Fetch Ondus Sense historical measurement data from the Ondus API. Returns a promise that will be resolved
-   * once measurement data has been queried from the Ondus API.
-  */
+   * Fetch Ondus Sense historical measurement data from the Ondus API. Will only be called if 
+   * historyService is enabled in the plugin configuration.
+   */
   getHistoricalMeasurements() {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Fetching historical temperature, flowrate, and pressure levels`);
     // Fetch all registered appliance measurements
@@ -245,7 +247,7 @@ export class OndusSenseGuard extends OndusAppliance {
           }
         });
 
-        // Add historical measurements to fakegato
+        // Add historical measurements to historyService
         measurementArray.forEach( value => {
           this.historyService.addEntry({time: moment(value.timestamp).unix(), 
             temp: value.temperature_guard});
@@ -297,6 +299,14 @@ export class OndusSenseGuard extends OndusAppliance {
               return 0;
             }
           });
+
+          // Add retrieved measurements from last day if historyService is enabled
+          measurementArray.forEach( value => {
+            this.historyService.addEntry({time: moment(value.timestamp).unix(), 
+              temp: value.temperature_guard});
+          });
+
+          // Sort and retrieve last measurement
           const lastMeasurement = measurementArray.slice(-1)[0];
           this.currentTimestamp = lastMeasurement.timestamp;    
           this.currentFlowRate = lastMeasurement.flowrate;

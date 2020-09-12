@@ -114,11 +114,15 @@ export abstract class OndusAppliance {
       .on('get', this.handleCurrentTemperatureGet.bind(this));
 
     // Initialize FakeGatoHistoryService
-    const FakeGatoHistoryService = fakegato(this.ondusPlatform.api);
-    this.historyService = new FakeGatoHistoryService('weather', this.accessory, {disableTimer: true});
-    this.historyService.log = this.ondusPlatform.log;
-    this.historyService.name = this.logPrefix;
-    this.historyService.accessoryName = this.logPrefix;
+    if (this.ondusPlatform.config['fakegato_support']) {
+      const FakeGatoHistoryService = fakegato(this.ondusPlatform.api);
+      this.historyService = new FakeGatoHistoryService('weather', this.accessory, {disableTimer: true});
+      this.historyService.log = this.ondusPlatform.log;
+      this.historyService.name = this.logPrefix;
+      this.historyService.accessoryName = this.logPrefix;
+    } else {
+      this.historyService = null;
+    }
     
   }
 

@@ -76,7 +76,11 @@ export class OndusSensePlus extends OndusAppliance {
 
   start() {
     // Fetch initial sensor data from Ondus API on startup
-    this.getHistoricalMeasurements();
+    if (this.historyService) {
+      this.getHistoricalMeasurements();
+    } else {
+      this.getLastMeasurements();
+    }
     this.getStatus();
     
     // Start timer for fetching updated values from Ondus API once every refresh_interval from now on
@@ -229,11 +233,13 @@ export class OndusSensePlus extends OndusAppliance {
           throw Error(`Unknown response: ${measurementArray}`);
         }
         
-        // Add retrieved measurements from last day to fakegato
-        measurementArray.forEach( value => {
-          this.historyService.addEntry({time: moment(value.timestamp).unix(), 
-            temp: value.temperature, humidity: value.humidity});
-        });
+        // Add retrieved measurements from last day if historyService is enabled
+        if (this.historyService) {
+          measurementArray.forEach( value => {
+            this.historyService.addEntry({time: moment(value.timestamp).unix(), 
+              temp: value.temperature, humidity: value.humidity});
+          });
+        }
 
         // Sort and retrieve last measurement
         this.ondusPlatform.log.debug(`[${this.logPrefix}] Retrieved ${measurementArray.length} measurements - picking latest one`);

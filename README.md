@@ -57,7 +57,8 @@ Plugin will automatically find and configure your Sense devices, and expose the 
    - Leakage Sensor
    - Temperature Sensor
    - Humidity Sensor
-   
+
+Fakegato history can optionally be enabled, so the Eve app can be used to display cool graphs of collected sensor data.   
 
 ## What is not supported
 
@@ -72,7 +73,6 @@ Plugin will automatically find and configure your Sense devices, and expose the 
 ## What I would like to see in the future
  
 * Proper OAuth library handling authentication
-* Eve history would be awesome using Fakegato
 * Displaying water pressure, flow metrics +++, but I have no idea what characteristics to use in Homebridge for this...
 
 

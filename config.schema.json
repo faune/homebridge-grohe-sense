@@ -46,6 +46,13 @@
         "type": "boolean",
         "required": false,
         "default": false
+      },
+      "fakegato_support" : {
+        "title":"Enable Fakegato History support",
+        "description":"Historical sensor data will be exposed to HomeKit over the Elgato Eve proprietary protocol. In order to view this you will need to download the Eve app.",
+        "type": "boolean",
+        "required": false,
+        "default": false
       }
     }
   }
