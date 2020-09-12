@@ -44,7 +44,7 @@ export class OndusSense extends OndusSensePlus {
     super(ondusPlatform, locationID, roomID, accessory);
 
     // Set extended sensor data to default values
-    this.currentBatteryLevel = 0;
+    this.currentBatteryLevel = 100;
 
     
 

@@ -1,3 +1,4 @@
+import moment from 'moment';
 import { PlatformAccessory, Service } from 'homebridge';
 
 import { OndusAppliance } from './ondusAppliance';
@@ -64,7 +65,7 @@ export class OndusSensePlus extends OndusAppliance {
     // set the Humidity service characteristics
     this.humidityService
       .setCharacteristic(this.ondusPlatform.Characteristic.Name, accessory.context.device.name)
-      .setCharacteristic(this.ondusPlatform.Characteristic.Active, this.ondusPlatform.Characteristic.Active.ACTIVE)
+      .setCharacteristic(this.ondusPlatform.Characteristic.StatusActive, this.ondusPlatform.Characteristic.Active.ACTIVE)
       .setCharacteristic(this.ondusPlatform.Characteristic.StatusFault, this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
 
     // create handlers for required characteristics for Humidity service
@@ -75,7 +76,7 @@ export class OndusSensePlus extends OndusAppliance {
 
   start() {
     // Fetch initial sensor data from Ondus API on startup
-    this.getMeasurements();
+    this.getHistoricalMeasurements();
     this.getStatus();
     
     // Start timer for fetching updated values from Ondus API once every refresh_interval from now on
@@ -90,7 +91,7 @@ export class OndusSensePlus extends OndusAppliance {
       // Make sure accessory context device has the latest appliance info
       this.updateApplianceInfo(); 
       // Fetch new data
-      this.getMeasurements();
+      this.getLastMeasurements();
       this.getStatus();
     }, refreshInterval);
   }
@@ -104,18 +105,18 @@ export class OndusSensePlus extends OndusAppliance {
   // ---- CHARACTERISTICS HANDLER FUNCTIONS BELOW ----
 
 
-  setHumidityServiceActive(active: boolean) {
-    if (active) {
-      this.humidityService.updateCharacteristic(this.ondusPlatform.Characteristic.Active, 
+  setHumidityServiceStatusActive(action: boolean) {
+    if (action) {
+      this.humidityService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusActive, 
         this.ondusPlatform.Characteristic.Active.ACTIVE);
     } else {
-      this.humidityService.updateCharacteristic(this.ondusPlatform.Characteristic.Active, 
+      this.humidityService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusActive, 
         this.ondusPlatform.Characteristic.Active.INACTIVE);      
     }
   }
 
-  setHumidityServiceStatusFault(active: boolean) {
-    if (active) {
+  setHumidityServiceStatusFault(action: boolean) {
+    if (action) {
       this.humidityService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
         this.ondusPlatform.Characteristic.StatusFault.GENERAL_FAULT);
     } else {
@@ -141,9 +142,70 @@ export class OndusSensePlus extends OndusAppliance {
 
 
   /**
-   * Fetch Ondus Sense measurement data from the Ondus API
+   * Fetch Ondus Sense historical measurement data from the Ondus API.
    */
-  getMeasurements() {
+  getHistoricalMeasurements() {
+    this.ondusPlatform.log.debug(`[${this.logPrefix}] Fetching historical temperature and humidity levels`);
+
+    // Fetch all registered appliance measurements
+    // If no measurements are present, the following is returned {"code":404,"message":"Not found"}
+    this.getApplianceMeasurements()
+      .then( measurement => {
+        const measurementArray = measurement.body.data.measurement;
+        if (!Array.isArray(measurementArray)) {
+          throw Error(`Unknown response: ${measurementArray}`);
+        }
+
+        // Sort historical measurements
+        this.ondusPlatform.log.debug(`[${this.logPrefix}] Retrieved ${measurementArray.length} historical measurements`);
+        measurementArray.sort((a, b) => {
+          const a_ts = new Date(a.timestamp).getTime();
+          const b_ts = new Date(b.timestamp).getTime();
+          if(a_ts > b_ts) {
+            return 1;
+          } else if(a_ts < b_ts) {
+            return -1;
+          } else {
+            return 0;
+          }
+        });
+
+        // Add historical measurements to fakegato
+        measurementArray.forEach( value => {
+          this.historyService.addEntry({time: moment(value.timestamp).unix(), 
+            temp: value.temperature, humidity: value.humidity});
+        });
+
+        // Extract latest sensor data
+        const lastMeasurement = measurementArray.slice(-1)[0];
+        this.currentTimestamp = lastMeasurement.timestamp;
+        this.currentTemperature = lastMeasurement.temperature;
+        this.currentHumidity = lastMeasurement.humidity;
+        this.ondusPlatform.log.info(`[${this.logPrefix}] Timestamp: ${this.currentTimestamp}`);
+        this.ondusPlatform.log.info(`[${this.logPrefix}] => Temperature: ${this.currentTemperature}˚C`);
+        this.ondusPlatform.log.info(`[${this.logPrefix}] => Humidity: ${this.currentHumidity}% RF`);
+
+        // Enable Active characteristics for temperature and humidity service
+        this.setTemperatureServiceStatusActive(true);
+        this.setHumidityServiceStatusActive(true);
+        
+      })
+      .catch( err => {
+        this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to retrieve historical temperature and humidity: ${err}`);
+
+        // Disable Active characteristics for temperature and humidity service
+        this.setTemperatureServiceStatusActive(false);
+        this.setHumidityServiceStatusActive(false);
+      });
+  }
+
+
+
+
+  /**
+   * Fetch latest Ondus Sense measurement data from the Ondus API
+   */
+  getLastMeasurements() {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Updating temperature and humidity levels`);
 
     // Fetch appliance measurements using current timestamp
@@ -166,7 +228,15 @@ export class OndusSensePlus extends OndusAppliance {
         if (!Array.isArray(measurementArray)) {
           throw Error(`Unknown response: ${measurementArray}`);
         }
-        this.ondusPlatform.log.debug(`[${this.logPrefix}] Retrieved ${measurementArray.length}: measurements - picking latest one`);
+        
+        // Add retrieved measurements from last day to fakegato
+        measurementArray.forEach( value => {
+          this.historyService.addEntry({time: moment(value.timestamp).unix(), 
+            temp: value.temperature, humidity: value.humidity});
+        });
+
+        // Sort and retrieve last measurement
+        this.ondusPlatform.log.debug(`[${this.logPrefix}] Retrieved ${measurementArray.length} measurements - picking latest one`);
         measurementArray.sort((a, b) => {
           const a_ts = new Date(a.timestamp).getTime();
           const b_ts = new Date(b.timestamp).getTime();
@@ -188,15 +258,15 @@ export class OndusSensePlus extends OndusAppliance {
         this.ondusPlatform.log.info(`[${this.logPrefix}] => Humidity: ${this.currentHumidity}% RF`);
 
         // Enable Active characteristics for temperature and humidity service
-        this.setTemperatureServiceActive(true);
-        this.setHumidityServiceActive(true);
+        this.setTemperatureServiceStatusActive(true);
+        this.setHumidityServiceStatusActive(true);
       })
       .catch( err => {
         this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to update temperature and humidity: ${err}`);
 
         // Disable Active characteristics for temperature and humidity service
-        this.setTemperatureServiceActive(false);
-        this.setHumidityServiceActive(false);
+        this.setTemperatureServiceStatusActive(false);
+        this.setHumidityServiceStatusActive(false);
       });
   }
 

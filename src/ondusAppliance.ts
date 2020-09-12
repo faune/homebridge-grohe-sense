@@ -1,4 +1,5 @@
 import { PlatformAccessory, Service } from 'homebridge';
+import fakegato from 'fakegato-history';
 
 import { PLUGIN_VERSION } from './settings';
 import { OndusPlatform } from './ondusPlatform';
@@ -10,7 +11,6 @@ import { OndusNotification, NOTIFICATION_CATEGORY_CRITICAL } from './ondusNotifi
  * An instance of this class is created for each accessory your platform registers
  * Each accessory may expose multiple services of different service types.
  */
-
 export abstract class OndusAppliance {
   static ONDUS_TYPE = 0;
   static ONDUS_PROD = 'Grohe AG'
@@ -22,12 +22,14 @@ export abstract class OndusAppliance {
     103 : 'Sense Guard',
   }
 
+  //log: Logger;
   logPrefix: string;
   applianceID: string;
 
   // Common sensor services
   leakService: Service;
   temperatureService: Service;
+  historyService: fakegato.FakeGatoHistoryService;
 
   // Placeholders for common sensor data
   currentTimestamp: string;
@@ -66,10 +68,10 @@ export abstract class OndusAppliance {
       .setCharacteristic(this.ondusPlatform.Characteristic.HardwareRevision, accessory.context.device.type)
       .setCharacteristic(this.ondusPlatform.Characteristic.SerialNumber, this.unhexlify(accessory.context.device.serial_number))
       .setCharacteristic(this.ondusPlatform.Characteristic.FirmwareRevision, accessory.context.device.version)
-      .setCharacteristic(this.ondusPlatform.Characteristic.SoftwareRevision, PLUGIN_VERSION)
-      .setCharacteristic(this.ondusPlatform.Characteristic.AppMatchingIdentifier, 'id1451814256');
+      .setCharacteristic(this.ondusPlatform.Characteristic.SoftwareRevision, PLUGIN_VERSION) 
+      .setCharacteristic(this.ondusPlatform.Characteristic.AppMatchingIdentifier, '1451814256');
+        
 
-    
     // Initialize common sensor services
 
     /**
@@ -82,32 +84,42 @@ export abstract class OndusAppliance {
     this.leakService
       .setCharacteristic(this.ondusPlatform.Characteristic.Name, accessory.context.device.name)
       .setCharacteristic(this.ondusPlatform.Characteristic.LeakDetected, this.ondusPlatform.Characteristic.LeakDetected.LEAK_NOT_DETECTED)
-      .setCharacteristic(this.ondusPlatform.Characteristic.Active, this.ondusPlatform.Characteristic.Active.ACTIVE)
+      .setCharacteristic(this.ondusPlatform.Characteristic.StatusActive, this.ondusPlatform.Characteristic.Active.ACTIVE)
       .setCharacteristic(this.ondusPlatform.Characteristic.StatusFault, this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);      
-    
+  
+
     // create handlers for required characteristics of Leak service
     this.leakService.getCharacteristic(this.ondusPlatform.Characteristic.LeakDetected)
       .on('get', this.handleLeakDetectedGet.bind(this));
 
+      
     /**
      * Temperature Service
      */
 
     // get the Temperature service if it exists, otherwise create a new Temperature service
-    this.temperatureService = this.accessory.getService(this.ondusPlatform.Service.TemperatureSensor) || 
-       this.accessory.addService(this.ondusPlatform.Service.TemperatureSensor);
-    
+    this.temperatureService = this.accessory.getService(this.ondusPlatform.Service.TemperatureSensor) ||
+      this.accessory.addService(this.ondusPlatform.Service.TemperatureSensor);
+
     // set the Temperature service characteristics
     this.temperatureService
       .setCharacteristic(this.ondusPlatform.Characteristic.Name, accessory.context.device.name)
-      .setCharacteristic(this.ondusPlatform.Characteristic.Active, this.ondusPlatform.Characteristic.Active.ACTIVE)
+      .setCharacteristic(this.ondusPlatform.Characteristic.StatusActive, this.ondusPlatform.Characteristic.Active.ACTIVE)
       .setCharacteristic(this.ondusPlatform.Characteristic.StatusFault, this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
-
+    //.setCharacteristic(this.ondusPlatform.Characteristic.TemperatureDisplayUnits, 
+    //this.ondusPlatform.Characteristic.TemperatureDisplayUnits.CELSIUS)
+      
     // create handlers for required characteristics of Temperature service
     this.temperatureService.getCharacteristic(this.ondusPlatform.Characteristic.CurrentTemperature)
       .on('get', this.handleCurrentTemperatureGet.bind(this));
 
-
+    // Initialize FakeGatoHistoryService
+    const FakeGatoHistoryService = fakegato(this.ondusPlatform.api);
+    this.historyService = new FakeGatoHistoryService('weather', this.accessory, {disableTimer: true});
+    this.historyService.log = this.ondusPlatform.log;
+    this.historyService.name = this.logPrefix;
+    this.historyService.accessoryName = this.logPrefix;
+    
   }
 
   /**
@@ -132,8 +144,8 @@ export abstract class OndusAppliance {
 
   // ---- CHARACTERISTICS HANDLER FUNCTIONS BELOW ----
 
-  setLeakServiceLeakDetected(active: boolean) {
-    if (active) {
+  setLeakServiceLeakDetected(action: boolean) {
+    if (action) {
       this.leakService.updateCharacteristic(this.ondusPlatform.Characteristic.LeakDetected, 
         this.ondusPlatform.Characteristic.LeakDetected.LEAK_DETECTED);
     } else {
@@ -142,38 +154,38 @@ export abstract class OndusAppliance {
     }
   }
 
-  setLeakServiceActive(active: boolean) {
-    if (active) {
-      this.leakService.updateCharacteristic(this.ondusPlatform.Characteristic.Active, 
+  setLeakServiceStatusActive(action: boolean) {
+    if (action) {
+      this.leakService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusActive, 
         this.ondusPlatform.Characteristic.Active.ACTIVE);
     } else {
-      this.leakService.updateCharacteristic(this.ondusPlatform.Characteristic.Active, 
-        this.ondusPlatform.Characteristic.Active.INACTIVE);      
+      this.leakService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusActive, 
+        this.ondusPlatform.Characteristic.Active.INACTIVE);
     }
   }
 
-  setLeakServiceStatusFault(active: boolean) {
-    if (active) {
+  setLeakServiceStatusFault(action: boolean) {
+    if (action) {
       this.leakService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
         this.ondusPlatform.Characteristic.StatusFault.GENERAL_FAULT);
     } else {
-      this.leakService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusActive, 
+      this.leakService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
         this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);      
     }
   }
 
-  setTemperatureServiceActive(active: boolean) {
-    if (active) {
-      this.temperatureService.updateCharacteristic(this.ondusPlatform.Characteristic.Active, 
+  setTemperatureServiceStatusActive(action: boolean) {
+    if (action) {
+      this.temperatureService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusActive, 
         this.ondusPlatform.Characteristic.Active.ACTIVE);
     } else {
-      this.temperatureService.updateCharacteristic(this.ondusPlatform.Characteristic.Active, 
+      this.temperatureService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusActive, 
         this.ondusPlatform.Characteristic.Active.INACTIVE);      
     }
   }
 
-  setTemperatureServiceStatusFault(active: boolean) {
-    if (active) {
+  setTemperatureServiceStatusFault(action: boolean) {
+    if (action) {
       this.temperatureService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
         this.ondusPlatform.Characteristic.StatusFault.GENERAL_FAULT);
     } else {
@@ -237,7 +249,7 @@ export abstract class OndusAppliance {
         this.setLeakServiceLeakDetected(this.leakDetected);
         
         // Enable Active characteristics for leak service
-        this.setLeakServiceActive(true);
+        this.setLeakServiceStatusActive(true);
         callback(null, this.leakDetected);
 
       })
@@ -246,7 +258,7 @@ export abstract class OndusAppliance {
         this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to process notifications: ${err}`);
         
         // Disable Active characteristics for leakage service
-        this.setLeakServiceActive(false);  
+        this.setLeakServiceStatusActive(false);  
         callback(err, this.leakDetected);
       });
   }
@@ -333,12 +345,13 @@ export abstract class OndusAppliance {
    * 
    * @param fromDate Optional Date argument when to fetch measurements from
    */
-  public async getApplianceMeasurements(fromDate?: Date) {
+  public async getApplianceMeasurements(fromDate?: Date, toDate?: Date) {
     return this.ondusPlatform.ondusSession.getApplianceMeasurements(
       this.getLocationID(), 
       this.getRoomID(), 
       this.getApplianceID(), 
-      fromDate);
+      fromDate,
+      toDate);
   }
 
   /**

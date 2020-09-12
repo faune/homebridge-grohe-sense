@@ -5,11 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-## [1.X.X] -
-
 ## [Released]
+
+## [1.4.0] - 2020-09-12
+
+Fakegato support is finally in, so looking at your sensor data in the Eve app should display nice graphs!
+
+NOTE: Please remove any cached Sense accessory using Homebridge UI, as this will most likely fix issues related to cached characteristics
+(like e.g. Active characteristics) that are no longer used by this plugin. In the Homebridge UI go to "(...) -> Homebridge Settings 
+-> Remove single cached accessory" and then delete all Grohe Sense cached accessories. Every accessory will be re-added upon next
+Homebridge restart, including all your historical data, so no worries!
+
+### Added
+
+- Fakegato history support
+
+### Changed
+
+- Take Two: Fixed a bug where status fault characteristics were never cleared after a message in Ondus API was marked as read
+- Removed characteristics Active. Characteristics StatusActive has been added instead. 
 
 ## [1.3.2] - 2020-08-28 
 

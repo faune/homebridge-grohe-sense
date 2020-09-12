@@ -135,7 +135,7 @@ export class OndusPlatform implements DynamicPlatformPlugin {
 
   
   private registerOndusAppliance(locationID, roomID, applianceInfo) {
-    
+
     // see if an accessory with the same uuid has already been registered and restored from
     // the cached devices we stored in the `configureAccessory` method above
     let accessory = this.accessories.find(accessory => accessory.UUID === applianceInfo.appliance_id);
