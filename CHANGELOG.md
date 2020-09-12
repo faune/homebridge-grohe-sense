@@ -18,7 +18,7 @@ Homebridge restart, including all your historical data, so no worries!
 
 ### Added
 
-- Fakegato history support
+- Fakegato history support can optionally be enabled in plugin settings
 
 ### Changed
 
