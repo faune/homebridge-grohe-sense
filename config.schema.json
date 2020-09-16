@@ -46,7 +46,15 @@
         "type": "boolean",
         "required": false,
         "default": false
+      },
+      "fakegato_support" : {
+        "title":"Enable Eve History support",
+        "description":"Export historical sensor data for temperature and humidity to HomeKit using the proprietary Elgato Eve protocol. This feature will only be available from the Eve app, and will not display anything in the default Home app.",
+        "type": "boolean",
+        "required": false,
+        "default": false
       }
+
     }
   }
 }
