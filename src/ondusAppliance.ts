@@ -87,7 +87,6 @@ export abstract class OndusAppliance {
       .setCharacteristic(this.ondusPlatform.Characteristic.StatusActive, this.ondusPlatform.Characteristic.Active.ACTIVE)
       .setCharacteristic(this.ondusPlatform.Characteristic.StatusFault, this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);      
   
-
     // create handlers for required characteristics of Leak service
     this.leakService.getCharacteristic(this.ondusPlatform.Characteristic.LeakDetected)
       .on('get', this.handleLeakDetectedGet.bind(this));
@@ -113,12 +112,21 @@ export abstract class OndusAppliance {
     this.temperatureService.getCharacteristic(this.ondusPlatform.Characteristic.CurrentTemperature)
       .on('get', this.handleCurrentTemperatureGet.bind(this));
 
+
+    /**
+     * History Service
+     */
+    
     // Initialize FakeGatoHistoryService
-    const FakeGatoHistoryService = fakegato(this.ondusPlatform.api);
-    this.historyService = new FakeGatoHistoryService('weather', this.accessory, {disableTimer: true});
-    this.historyService.log = this.ondusPlatform.log;
-    this.historyService.name = this.logPrefix;
-    this.historyService.accessoryName = this.logPrefix;
+    if (this.ondusPlatform.config['fakegato_support']) {
+      const FakeGatoHistoryService = fakegato(this.ondusPlatform.api);
+      this.historyService = new FakeGatoHistoryService('weather', this.accessory, {disableTimer: true});
+      this.historyService.log = this.ondusPlatform.log;
+      this.historyService.name = this.logPrefix;
+      this.historyService.accessoryName = this.logPrefix;
+    } else {
+      this.historyService = null;
+    }
     
   }
 

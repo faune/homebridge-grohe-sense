@@ -84,7 +84,9 @@ export class OndusSenseGuard extends OndusAppliance {
 
 
   start() {
-    this.getHistoricalMeasurements();
+    if (this.historyService) {
+      this.getHistoricalMeasurements();
+    }
   }
 
 
@@ -245,11 +247,13 @@ export class OndusSenseGuard extends OndusAppliance {
           }
         });
 
-        // Add historical measurements to fakegato
-        measurementArray.forEach( value => {
-          this.historyService.addEntry({time: moment(value.timestamp).unix(), 
-            temp: value.temperature_guard});
-        });
+        // Add historical measurements to historyService
+        if (this.historyService) {
+          measurementArray.forEach( value => {
+            this.historyService.addEntry({time: moment(value.timestamp).unix(), 
+              temp: value.temperature_guard});
+          });
+        }
       })
       .catch( err => {
         this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to retrieve historical temperature, flowrate, and pressure: ${err}`);
@@ -297,6 +301,16 @@ export class OndusSenseGuard extends OndusAppliance {
               return 0;
             }
           });
+
+          // Add last measurements to historyService
+          if (this.historyService) {
+            measurementArray.forEach( value => {
+              this.historyService.addEntry({time: moment(value.timestamp).unix(), 
+                temp: value.temperature_guard});
+            });
+          }
+
+          // Extract latest sensor data
           const lastMeasurement = measurementArray.slice(-1)[0];
           this.currentTimestamp = lastMeasurement.timestamp;    
           this.currentFlowRate = lastMeasurement.flowrate;
@@ -309,7 +323,7 @@ export class OndusSenseGuard extends OndusAppliance {
           this.ondusPlatform.log.info(`[${this.logPrefix}] => Pressure: ${this.currentPressure} bar`);
           this.ondusPlatform.log.info(`[${this.logPrefix}] => Temperature: ${this.currentTemperature}˚C`);
 
-          // Enable Active characteristics for temperature service
+          // Enable StatusActive characteristics for temperature service
           this.setTemperatureServiceStatusActive(true);
         
           // Resolve promise to handleCurrentTemperatureGet()
@@ -318,7 +332,7 @@ export class OndusSenseGuard extends OndusAppliance {
         .catch( err => {
           this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to update temperature: ${err}`);
       
-          // Disable Active characteristics for temperature service
+          // Disable StatusActive characteristics for temperature service
           this.setTemperatureServiceStatusActive(false);
         
           // Reject promise to handleCurrentTemperatureGet() and return last known temperature

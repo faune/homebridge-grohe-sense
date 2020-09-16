@@ -76,7 +76,11 @@ export class OndusSensePlus extends OndusAppliance {
 
   start() {
     // Fetch initial sensor data from Ondus API on startup
-    this.getHistoricalMeasurements();
+    if (this.historyService) {
+      this.getHistoricalMeasurements();
+    } else {
+      this.getLastMeasurements();
+    }
     this.getStatus();
     
     // Start timer for fetching updated values from Ondus API once every refresh_interval from now on
@@ -170,11 +174,13 @@ export class OndusSensePlus extends OndusAppliance {
           }
         });
 
-        // Add historical measurements to fakegato
-        measurementArray.forEach( value => {
-          this.historyService.addEntry({time: moment(value.timestamp).unix(), 
-            temp: value.temperature, humidity: value.humidity});
-        });
+        // Add historical measurements to historyService
+        if (this.historyService) {
+          measurementArray.forEach( value => {
+            this.historyService.addEntry({time: moment(value.timestamp).unix(), 
+              temp: value.temperature, humidity: value.humidity});
+          });
+        }
 
         // Extract latest sensor data
         const lastMeasurement = measurementArray.slice(-1)[0];
@@ -185,7 +191,7 @@ export class OndusSensePlus extends OndusAppliance {
         this.ondusPlatform.log.info(`[${this.logPrefix}] => Temperature: ${this.currentTemperature}˚C`);
         this.ondusPlatform.log.info(`[${this.logPrefix}] => Humidity: ${this.currentHumidity}% RF`);
 
-        // Enable Active characteristics for temperature and humidity service
+        // Enable StatusActive characteristics for temperature and humidity service
         this.setTemperatureServiceStatusActive(true);
         this.setHumidityServiceStatusActive(true);
         
@@ -193,7 +199,7 @@ export class OndusSensePlus extends OndusAppliance {
       .catch( err => {
         this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to retrieve historical temperature and humidity: ${err}`);
 
-        // Disable Active characteristics for temperature and humidity service
+        // Disable StatusActive characteristics for temperature and humidity service
         this.setTemperatureServiceStatusActive(false);
         this.setHumidityServiceStatusActive(false);
       });
@@ -229,12 +235,6 @@ export class OndusSensePlus extends OndusAppliance {
           throw Error(`Unknown response: ${measurementArray}`);
         }
         
-        // Add retrieved measurements from last day to fakegato
-        measurementArray.forEach( value => {
-          this.historyService.addEntry({time: moment(value.timestamp).unix(), 
-            temp: value.temperature, humidity: value.humidity});
-        });
-
         // Sort and retrieve last measurement
         this.ondusPlatform.log.debug(`[${this.logPrefix}] Retrieved ${measurementArray.length} measurements - picking latest one`);
         measurementArray.sort((a, b) => {
@@ -249,6 +249,15 @@ export class OndusSensePlus extends OndusAppliance {
           }
         });
 
+        // Add retrieved measurements from last day to historyService
+        if (this.historyService) {
+          measurementArray.forEach( value => {
+            this.historyService.addEntry({time: moment(value.timestamp).unix(), 
+              temp: value.temperature, humidity: value.humidity});
+          });
+        }
+
+        // Extract latest sensor data
         const lastMeasurement = measurementArray.slice(-1)[0];
         this.currentTimestamp = lastMeasurement.timestamp;
         this.currentTemperature = lastMeasurement.temperature;
@@ -257,14 +266,14 @@ export class OndusSensePlus extends OndusAppliance {
         this.ondusPlatform.log.info(`[${this.logPrefix}] => Temperature: ${this.currentTemperature}˚C`);
         this.ondusPlatform.log.info(`[${this.logPrefix}] => Humidity: ${this.currentHumidity}% RF`);
 
-        // Enable Active characteristics for temperature and humidity service
+        // Enable StatusActive characteristics for temperature and humidity service
         this.setTemperatureServiceStatusActive(true);
         this.setHumidityServiceStatusActive(true);
       })
       .catch( err => {
         this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to update temperature and humidity: ${err}`);
 
-        // Disable Active characteristics for temperature and humidity service
+        // Disable StatusActive characteristics for temperature and humidity service
         this.setTemperatureServiceStatusActive(false);
         this.setHumidityServiceStatusActive(false);
       });
