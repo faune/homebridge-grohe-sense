@@ -13,4 +13,4 @@ export const PLUGIN_NAME = 'homebridge-grohe-sense';
  * 
  * WARNING: Must be updated manually before release!
  */
-export const PLUGIN_VERSION = '1.4.0';
+export const PLUGIN_VERSION = '1.4.1';
