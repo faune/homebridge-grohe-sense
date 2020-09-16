@@ -102,7 +102,7 @@ How often to query Ondus API for new data. Default setting of `3600` seconds is 
 ### `valve_control`
 If you have kids like me with iCloud family sharing enabled, and dont want them brats (just kidding, mine are actually angels) to turn off the main water supply through HomeKit as a prank when you are showering - this is for you! Set `valve_control` to `false`, and the plugin will ignore all valve control requests :-)
 
-## `fakegato_support``
+## `fakegato_support`
 Export historical sensor data for temperature and humidity to HomeKit using the proprietary Elgato Eve protocol. This feature will only be available from the Eve app, and
 will not display anything in the default Home app.
 
