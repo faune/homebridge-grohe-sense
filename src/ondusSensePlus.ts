@@ -174,11 +174,13 @@ export class OndusSensePlus extends OndusAppliance {
           }
         });
 
-        // Add historical measurements to fakegato
-        measurementArray.forEach( value => {
-          this.historyService.addEntry({time: moment(value.timestamp).unix(), 
-            temp: value.temperature, humidity: value.humidity});
-        });
+        // Add historical measurements if historyService is enabled
+        if (this.historyService) {
+          measurementArray.forEach( value => {
+            this.historyService.addEntry({time: moment(value.timestamp).unix(), 
+              temp: value.temperature, humidity: value.humidity});
+          });
+        }
 
         // Extract latest sensor data
         const lastMeasurement = measurementArray.slice(-1)[0];

@@ -247,11 +247,14 @@ export class OndusSenseGuard extends OndusAppliance {
           }
         });
 
-        // Add historical measurements to historyService
-        measurementArray.forEach( value => {
-          this.historyService.addEntry({time: moment(value.timestamp).unix(), 
-            temp: value.temperature_guard});
-        });
+        // Add historical measurements if historyService is enabled
+        if (this.historyService) {
+          measurementArray.forEach( value => {
+            this.historyService.addEntry({time: moment(value.timestamp).unix(), 
+              temp: value.temperature_guard});
+          });
+        }
+
       })
       .catch( err => {
         this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to retrieve historical temperature, flowrate, and pressure: ${err}`);
@@ -301,10 +304,12 @@ export class OndusSenseGuard extends OndusAppliance {
           });
 
           // Add retrieved measurements from last day if historyService is enabled
-          measurementArray.forEach( value => {
-            this.historyService.addEntry({time: moment(value.timestamp).unix(), 
-              temp: value.temperature_guard});
-          });
+          if (this.historyService) {
+            measurementArray.forEach( value => {
+              this.historyService.addEntry({time: moment(value.timestamp).unix(),
+                temp: value.temperature_guard});
+            });
+          }
 
           // Sort and retrieve last measurement
           const lastMeasurement = measurementArray.slice(-1)[0];
