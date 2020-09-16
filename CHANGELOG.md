@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Released]
 
+## [1.4.1] - 2020-09-12
+
+Small update removing deprecated dependency.
+
+### Added
+
+- No new features
+
+### Changed
+
+- Removed deprecated dependency
+
 ## [1.4.0] - 2020-09-12
 
 Fakegato support is finally in, so looking at your sensor data in the Eve app should display nice graphs!
