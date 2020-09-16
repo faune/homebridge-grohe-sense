@@ -28,7 +28,6 @@
   ],
   "dependencies": {
     "@types/cheerio": "^0.22.21",
-    "@types/moment": "^2.13.0",
     "@types/superagent": "^4.1.8",
     "cheerio": "^1.0.0-rc.3",
     "fakegato-history": "^0.5.6",
