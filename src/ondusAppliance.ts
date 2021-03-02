@@ -65,7 +65,7 @@ export abstract class OndusAppliance {
       .setCharacteristic(this.ondusPlatform.Characteristic.Manufacturer, OndusAppliance.ONDUS_PROD)
       .setCharacteristic(this.ondusPlatform.Characteristic.Model, this.ONDUS_MAP[ondusType])
       .setCharacteristic(this.ondusPlatform.Characteristic.Name, accessory.context.device.name)
-      .setCharacteristic(this.ondusPlatform.Characteristic.HardwareRevision, accessory.context.device.type)
+      .setCharacteristic(this.ondusPlatform.Characteristic.HardwareRevision, accessory.context.device.type.toString())
       .setCharacteristic(this.ondusPlatform.Characteristic.SerialNumber, this.unhexlify(accessory.context.device.serial_number))
       .setCharacteristic(this.ondusPlatform.Characteristic.FirmwareRevision, accessory.context.device.version)
       .setCharacteristic(this.ondusPlatform.Characteristic.SoftwareRevision, PLUGIN_VERSION) 
