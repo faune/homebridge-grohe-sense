@@ -240,6 +240,8 @@ export abstract class OndusAppliance {
           this.ondusPlatform.log.info(`[${this.logPrefix}] Processing ${res.body.length} notifications ...`);
 
           // Iterate over all notifications for this accessory
+          this.ondusPlatform.log.debug(`[${this.logPrefix}] API RSP: "${res.body}"`);
+          this.ondusPlatform.log.debug(JSON.stringify(res.body));
           res.body.forEach(element => {
             if (element.category === NOTIFICATION_CATEGORY_CRITICAL ) {
               // Check if notifications contained one or more category critical messages.
