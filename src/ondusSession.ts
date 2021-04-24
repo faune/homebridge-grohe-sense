@@ -66,12 +66,11 @@ export class OndusSession {
 
     // Throttling support for HTTP requests
     this.throttle = new Throttle({
-      'active': true,  // set false to pause queue
-      'rate': 6,       // how many requests can be sent every `ratePer`
-      'ratePer': 1000, // number of ms in which `rate` requests may be sent
-      'concurrent': 2, // how many requests can be sent concurrently
+      'active': this.config['throttle_support'],        // set false to pause queue
+      'rate': this.config['throttle_rate'],             // how many requests can be sent every `ratePer`
+      'ratePer': this.config['throttle_rateper'],       // number of ms in which `rate` requests may be sent
+      'concurrent': this.config['throttle_concurrent'], // how many requests can be sent concurrently
     });
-
   }
 
   /**
