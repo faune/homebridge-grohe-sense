@@ -229,6 +229,13 @@ export class OndusSenseGuard extends OndusAppliance {
 
     this.getApplianceMeasurements()
       .then( measurement => {
+
+        // Dump server response for debugging purpose if SHTF mode is enabled
+        if (this.ondusPlatform.config['shtf_mode']) {
+          const debug = JSON.stringify(measurement.body);
+          this.ondusPlatform.log.debug(`[${this.logPrefix}] getApplianceMeasurements() API RSP:\n"${debug}"`);
+        }
+
         if ((measurement.body.data !== undefined) && (Array.isArray(measurement.body.data.measurement))) {
           const measurementArray = measurement.body.data.measurement;
           this.ondusPlatform.log.debug(`[${this.logPrefix}] Retrieved ${measurementArray.length} historical measurements`);
@@ -253,7 +260,6 @@ export class OndusSenseGuard extends OndusAppliance {
           }
         } else {
           this.ondusPlatform.log.debug(`[${this.logPrefix}] No historical data returned`);
-          this.ondusPlatform.log.debug(JSON.stringify(measurement.body));
         }
       })
       .catch( err => {
