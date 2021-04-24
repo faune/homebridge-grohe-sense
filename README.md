@@ -117,11 +117,11 @@ Depending on the number of Ondus devices you have, the Ondus API might restrict 
 ### `shtf_mode`
 The Shit Hit The Fan mode is for debugging. If something is not working as expected, please enable this mode and run homebridge in debug mode. This will include more noisy logging which hopefully can help locate the problem. The debug log must be included when you are reporting an issue.
 
-## Obtaining a `refresh token`
+## Obtaining a `refresh_token`
 
 Source: <https://github.com/openhab/openhab-addons/blob/2.5.x/bundles/org.openhab.binding.groheondus/README.md#obtaining-a-refresh-token>
 
-Actually obtaining a `refresh token` from the GROHE ONDUS Api requires some manual steps.
+Actually obtaining a `refresh_token` from the GROHE ONDUS Api requires some manual steps.
 In order to more deeply understand what is happening during the process, you can read more information about the OAuth2/OIDC (OpenID Connect) login flow by searching for these terms in your favorite search engine.
 Here is a short step-by-step guide on how to obtain a refresh token:
 
@@ -156,7 +156,7 @@ E.g.: If the response of the page looks like this:
 ````
 
 Then the `refresh_token` value you should copy would be: `the_refresh_token`.
-This value is the `refresh token` you should save as described above.
+This value is the `refresh_token` you should save as described above.
 
 
 ## Testing unreleased versions on your homebridge setup
