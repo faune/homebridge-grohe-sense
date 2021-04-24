@@ -87,10 +87,16 @@ There is a Settings screen during plugin setup that helps you configure the conf
   "password": "<secret>",
   "refresh_interval": 3600,
   "valve_control": true,
-  "fakegato_support": true,
+  "throttle_support": false,
+  "throttle_rate": 6,
+  "throttle_rateper": 1000,
+  "throttle_concurrent": 2,
+  "fakegato_support": false,
+  "shtf_mode": false,
   "platform": "Ondus"
 }
 ````
+
 ### `refresh_token` and `username/password`
 Note that for both `refresh_token` and `username/password` you must remove `< >` above when inserting your credentials. 
 
@@ -104,6 +110,12 @@ If you have kids like me with iCloud family sharing enabled, and dont want them 
 
 ### `fakegato_support`
 Export historical sensor data for temperature and humidity to HomeKit using the proprietary Elgato Eve protocol. This feature will only be available from the Eve app, and will not display anything in the default Home app.
+
+### `throttle_support`
+Depending on the number of Ondus devices you have, the Ondus API might restrict the number of requests accepted within a server configured time. If you see ` Error: Too Many Requests` in the log, its time to start throttling!
+
+### `shtf_mode`
+The Shit Hit The Fan mode is for debugging. If something is not working as expected, please enable this mode and run homebridge in debug mode. This will include more noisy logging which hopefully can help locate the problem. The debug log must be included when you are reporting an issue.
 
 ## Obtaining a `refresh token`
 
