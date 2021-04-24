@@ -3,7 +3,7 @@
   "pluginType": "platform",
   "singular": true,
   "headerDisplay": "Ondus plugin for Grohe Sense Guard water control and Sense leakage detectors",
-  "footerDisplay": "For a detailed description, see the [wiki](https://github.com/faune/homebridge-plugin-ondus/wiki/Configuration)",
+  "footerDisplay": "For a detailed description, see the [wiki](https://github.com/faune/homebridge-plugin-ondus/wiki/Configuration) • Report an [issue](https://github.com/faune/homebridge-grohe-sense/issues/new)",
   "schema": {
     "type": "object",
     "properties": {
@@ -12,6 +12,13 @@
         "type": "string",
         "required": true,
         "default": "Ondus"
+      },
+      "valve_control" : {
+        "title":"Control Sense Guard from HomeKit",
+        "description":"Only enable this checkbox if you really, really, REALLY think controlling your Sense Guard main water inlet valve from HomeKit is a good idea. If this option is left unchecked (or not configured in config.json) the default behavior is to simply display the current state of the valve. Requests to alter the valve state will be ignored.",
+        "type": "boolean",
+        "required": false,
+        "default": false
       },
       "refresh_token": {
         "description":"Grohe Ondus API refresh token",
@@ -40,12 +47,39 @@
         "minimum" : 60,
         "maximum" : 86400
       },
-      "valve_control" : {
-        "title":"Control Sense Guard from HomeKit",
-        "description":"Only enable this checkbox if you really, really, REALLY think controlling your Sense Guard main water inlet valve from HomeKit is a good idea. If this option is left unchecked (or not configured in config.json) the default behavior is to simply display the current state of the valve. Requests to alter the valve state will be ignored.",
+      "throttle_support" : {
+        "title":"Enable Ondus API throttling",
+        "description":"If you experience HTTP error \"Too Many Requests\" its time to enable Throttling! Note that this can slow you Homebridge instance down, so you need to play with the limits below to hit that special sweetspot for yourself.",
         "type": "boolean",
         "required": false,
         "default": false
+      },
+      "throttle_rate" : {
+        "title":"Throttle rate",
+        "description":"How many requests can be sent every rate period. (default: 6)",
+        "type": "integer",
+        "required": false,
+        "default" : 6,
+        "minimum" : 1,
+        "maximum" : 40
+      },
+      "throttle_rateper" : {
+        "title":"Throttle rate period",
+        "description":"Number of msec in which rate requests may be sent. (default: 1000)",
+        "type": "integer",
+        "required": false,
+        "default" : 1000,
+        "minimum" : 100,
+        "maximum" : 10000
+      },
+      "throttle_concurrent" : {
+        "title":"Throttle concurrent requests",
+        "description":"How many requests can be sent concurrently. (default: 2)",
+        "type": "integer",
+        "required": false,
+        "default" : 2,
+        "minimum" : 1,
+        "maximum" : 10
       },
       "fakegato_support" : {
         "title":"Enable Eve History support",
@@ -53,8 +87,65 @@
         "type": "boolean",
         "required": false,
         "default": false
+      },
+      "shtf_mode" : {
+        "title":"SHTF Mode",
+        "description":"Shit happens. Nobody's perfect. So when you do smell it, please enable this and dump the log into a new issue using link in footer.",
+        "type": "boolean",
+        "required": false,
+        "default": false
       }
-
     }
-  }
+  },
+  "layout": [
+    {
+      "type": "flex",
+      "flex-flow": "row wrap",
+      "items": [
+        {
+          "type": "flex",
+          "flex-flow": "column",
+          "items": [
+            "name",
+            "valve_control"
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "login",
+      "type": "fieldset",
+      "expandable": true,
+      "title": "Login Credentials",
+      "items": [
+        "refresh_token",
+        "username",
+        "password"
+      ]
+    },
+    {
+      "ref": "network",
+      "type": "fieldset",
+      "expandable": true,
+      "title": "Network",
+      "items": [
+        "refresh_interval",
+        "throttle_support",
+        "throttle_rate",
+        "throttle_rateper",
+        "throttle_concurrent"
+      ]
+    },
+    {
+      "ref": "advanced",
+      "type": "fieldset",
+      "expandable": true,
+      "title": "Advanced",
+      "items": [
+        "fakegato_support",
+        "shtf_mode"
+      ]
+    }
+  ]
+ 
 }
