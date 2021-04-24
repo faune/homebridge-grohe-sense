@@ -229,6 +229,12 @@ export abstract class OndusAppliance {
     this.getApplianceNotifications()
       .then( res => {
 
+        // Dump server response for debugging purpose if SHTF mode is enabled
+        if (this.ondusPlatform.config['shtf_mode']) {
+          const debug = JSON.stringify(res.body);
+          this.ondusPlatform.log.debug(`[${this.logPrefix}] getApplianceNotifications() API RSP:\n "${debug}"`);
+        }
+
         // Reset all status fault characteristics before parsing new notifications
         this.leakDetected = false;
         this.resetAllStatusFaults();
@@ -240,8 +246,6 @@ export abstract class OndusAppliance {
           this.ondusPlatform.log.info(`[${this.logPrefix}] Processing ${res.body.length} notifications ...`);
 
           // Iterate over all notifications for this accessory
-          this.ondusPlatform.log.debug(`[${this.logPrefix}] API RSP: "${res.body}"`);
-          this.ondusPlatform.log.debug(JSON.stringify(res.body));
           res.body.forEach(element => {
             if (element.category === NOTIFICATION_CATEGORY_CRITICAL ) {
               // Check if notifications contained one or more category critical messages.
