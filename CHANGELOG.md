@@ -6,7 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [Unreleased]
+
 ## [Released]
+
+## [1.5.0] - 2021-04-24
+
+### Added
+
+- Use superagent throttling to prevent Ondus API request rate limitations. 
+- SHTF mode added to config: Log various HTTP responses to figure out why undefined is being reported by users
+
+### Changed 
+
+- Fixed characteristics warnings flagged by latest HAP-NodeJS version
+- Dependency updates: homebridge@1.3.1, typescript@4.2.2
 
 ## [1.4.2] - 2020-09-16
 

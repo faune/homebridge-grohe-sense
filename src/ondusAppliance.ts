@@ -65,7 +65,7 @@ export abstract class OndusAppliance {
       .setCharacteristic(this.ondusPlatform.Characteristic.Manufacturer, OndusAppliance.ONDUS_PROD)
       .setCharacteristic(this.ondusPlatform.Characteristic.Model, this.ONDUS_MAP[ondusType])
       .setCharacteristic(this.ondusPlatform.Characteristic.Name, accessory.context.device.name)
-      .setCharacteristic(this.ondusPlatform.Characteristic.HardwareRevision, accessory.context.device.type)
+      .setCharacteristic(this.ondusPlatform.Characteristic.HardwareRevision, accessory.context.device.type.toString())
       .setCharacteristic(this.ondusPlatform.Characteristic.SerialNumber, this.unhexlify(accessory.context.device.serial_number))
       .setCharacteristic(this.ondusPlatform.Characteristic.FirmwareRevision, accessory.context.device.version)
       .setCharacteristic(this.ondusPlatform.Characteristic.SoftwareRevision, PLUGIN_VERSION) 
@@ -229,6 +229,12 @@ export abstract class OndusAppliance {
     this.getApplianceNotifications()
       .then( res => {
 
+        // Dump server response for debugging purpose if SHTF mode is enabled
+        if (this.ondusPlatform.config['shtf_mode']) {
+          const debug = JSON.stringify(res.body);
+          this.ondusPlatform.log.debug(`[${this.logPrefix}] handleLeakDetectedGet().getApplianceNotifications() API RSP:\n "${debug}"`);
+        }
+
         // Reset all status fault characteristics before parsing new notifications
         this.leakDetected = false;
         this.resetAllStatusFaults();
@@ -327,7 +333,12 @@ export abstract class OndusAppliance {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Updating appliance info`);
     this.getApplianceInfo()
       .then( info => {
-        //this.ondusPlatform.log.debug('info: ', info.body);
+        // Dump server response for debugging purpose if SHTF mode is enabled
+        if (this.ondusPlatform.config['shtf_mode']) {
+          const debug = JSON.stringify(info.body);
+          this.ondusPlatform.log.debug(`[${this.logPrefix}] updateApplianceInfo().getApplianceInfo() API RSP:\n"${debug}"`);
+        }
+
         this.accessory.context.device = info.body[0];
         this.thresholds.update();
       })

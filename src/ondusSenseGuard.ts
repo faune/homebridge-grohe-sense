@@ -229,30 +229,37 @@ export class OndusSenseGuard extends OndusAppliance {
 
     this.getApplianceMeasurements()
       .then( measurement => {
-        //this.ondusPlatform.log.debug('res: ', measurement);
-        const measurementArray = measurement.body.data.measurement;
-        if (!Array.isArray(measurementArray)) {
-          this.ondusPlatform.log.debug(`[${this.logPrefix}] Unknown response ${measurement.body}`);
-        }
-        this.ondusPlatform.log.debug(`[${this.logPrefix}] Retrieved ${measurementArray.length} historical measurements`);
-        measurementArray.sort((a, b) => {
-          const a_ts = new Date(a.timestamp).getTime();
-          const b_ts = new Date(b.timestamp).getTime();
-          if(a_ts > b_ts) {
-            return 1;
-          } else if(a_ts < b_ts) {
-            return -1;
-          } else {
-            return 0;
-          }
-        });
 
-        // Add historical measurements to historyService
-        if (this.historyService) {
-          measurementArray.forEach( value => {
-            this.historyService.addEntry({time: moment(value.timestamp).unix(), 
-              temp: value.temperature_guard});
+        // Dump server response for debugging purpose if SHTF mode is enabled
+        if (this.ondusPlatform.config['shtf_mode']) {
+          const debug = JSON.stringify(measurement.body);
+          this.ondusPlatform.log.debug(`[${this.logPrefix}] getHistoricalMeasurements().getApplianceMeasurements() API RSP:\n"${debug}"`);
+        }
+
+        if ((measurement.body.data !== undefined) && (Array.isArray(measurement.body.data.measurement))) {
+          const measurementArray = measurement.body.data.measurement;
+          this.ondusPlatform.log.debug(`[${this.logPrefix}] Retrieved ${measurementArray.length} historical measurements`);
+          measurementArray.sort((a, b) => {
+            const a_ts = new Date(a.timestamp).getTime();
+            const b_ts = new Date(b.timestamp).getTime();
+            if(a_ts > b_ts) {
+              return 1;
+            } else if(a_ts < b_ts) {
+              return -1;
+            } else {
+              return 0;
+            }
           });
+
+          // Add historical measurements to historyService
+          if (this.historyService) {
+            measurementArray.forEach( value => {
+              this.historyService.addEntry({time: moment(value.timestamp).unix(), 
+                temp: value.temperature_guard});
+            });
+          }
+        } else {
+          this.ondusPlatform.log.debug(`[${this.logPrefix}] No historical data returned`);
         }
       })
       .catch( err => {

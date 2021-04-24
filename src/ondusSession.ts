@@ -1,6 +1,7 @@
 import { Logger, PlatformConfig } from 'homebridge';
 
 import superagent from 'superagent';
+import Throttle from 'superagent-throttle';
 import cheerio from 'cheerio';
 
 
@@ -17,14 +18,15 @@ export class OndusSession {
 
   log: Logger;
   config: PlatformConfig;
-  refreshToken = '';
+  refreshToken: string;
   refreshTokenExpireIn = 15552000; // Default 180 days
-  accessToken = '';
+  accessToken: string;
   accessTokenExpireIn = 3600; // Default 1 hour
-  username = '';
-  password = '';
-  sessionCookie = '';
+  username: string;
+  password: string;
+  sessionCookie: string;
   loggedIn: boolean;
+  throttle: Throttle;
 
   // Ondus URLs
   BASE_URL = 'https://idp2-apigw.cloud.grohe.com/v3/iot'
@@ -41,6 +43,14 @@ export class OndusSession {
     this.config = config;
     this.loggedIn = false;
 
+    // Initialize OAuth properties to empty strings
+    this.refreshToken = '';
+    this.accessToken = '';
+    this.username = '';
+    this.password = '';
+    this.sessionCookie = '';
+
+    // Parse config
     if (config['refresh_token'] && (config['refresh_token'] !== '<Paste refresh token here>')) {
       this.log.debug('refreshToken: ', config['refresh_token']);
       this.refreshToken = config['refresh_token'];
@@ -53,6 +63,14 @@ export class OndusSession {
       this.log.debug('password: ', '<secret>');
       this.password = this.config['password'];
     }
+
+    // Throttling support for HTTP requests
+    this.throttle = new Throttle({
+      'active': this.config['throttle_support'],        // set false to pause queue
+      'rate': this.config['throttle_rate'],             // how many requests can be sent every `ratePer`
+      'ratePer': this.config['throttle_rateper'],       // number of ms in which `rate` requests may be sent
+      'concurrent': this.config['throttle_concurrent'], // how many requests can be sent concurrently
+    });
   }
 
   /**
@@ -263,6 +281,7 @@ export class OndusSession {
     return new Promise<superagent.Response>((resolve, reject) => {
       superagent
         .get(url)
+        .use(this.throttle.plugin())
         .set('Content-Type', 'application/json')
         .set('Authorization', `Bearer ${this.accessToken}`)
         .set('accept', 'json')

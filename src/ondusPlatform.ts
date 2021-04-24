@@ -29,6 +29,19 @@ export class OndusPlatform implements DynamicPlatformPlugin {
     public readonly api: API,
   ) {
 
+    // Dump config in SHTF mode
+    if (this.config['shtf_mode']) {
+      const restricted = ['username', 'password', 'refresh_token'];
+      this.log.debug('Config settings:');
+      for (const key in this.config) {
+        let value = this.config[key];
+        if (restricted.includes(key)) {
+          value = '<hidden>';
+        }
+        this.log.debug(`\t${key} : ${value}`);
+      }
+    }
+
     // Validate config
     if (!this.config['refresh_token'] && (!this.config['username'] || !this.config['password'])) {
       const err = `Must configure either refresh_token, or username and password, in "${this.config.name}" section of config.json`;
