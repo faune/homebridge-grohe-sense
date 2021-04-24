@@ -233,7 +233,7 @@ export class OndusSenseGuard extends OndusAppliance {
         // Dump server response for debugging purpose if SHTF mode is enabled
         if (this.ondusPlatform.config['shtf_mode']) {
           const debug = JSON.stringify(measurement.body);
-          this.ondusPlatform.log.debug(`[${this.logPrefix}] getApplianceMeasurements() API RSP:\n"${debug}"`);
+          this.ondusPlatform.log.debug(`[${this.logPrefix}] getHistoricalMeasurements().getApplianceMeasurements() API RSP:\n"${debug}"`);
         }
 
         if ((measurement.body.data !== undefined) && (Array.isArray(measurement.body.data.measurement))) {

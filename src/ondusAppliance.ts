@@ -232,7 +232,7 @@ export abstract class OndusAppliance {
         // Dump server response for debugging purpose if SHTF mode is enabled
         if (this.ondusPlatform.config['shtf_mode']) {
           const debug = JSON.stringify(res.body);
-          this.ondusPlatform.log.debug(`[${this.logPrefix}] getApplianceNotifications() API RSP:\n "${debug}"`);
+          this.ondusPlatform.log.debug(`[${this.logPrefix}] handleLeakDetectedGet().getApplianceNotifications() API RSP:\n "${debug}"`);
         }
 
         // Reset all status fault characteristics before parsing new notifications
@@ -333,7 +333,12 @@ export abstract class OndusAppliance {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Updating appliance info`);
     this.getApplianceInfo()
       .then( info => {
-        //this.ondusPlatform.log.debug('info: ', info.body);
+        // Dump server response for debugging purpose if SHTF mode is enabled
+        if (this.ondusPlatform.config['shtf_mode']) {
+          const debug = JSON.stringify(info.body);
+          this.ondusPlatform.log.debug(`[${this.logPrefix}] updateApplianceInfo().getApplianceInfo() API RSP:\n"${debug}"`);
+        }
+
         this.accessory.context.device = info.body[0];
         this.thresholds.update();
       })
