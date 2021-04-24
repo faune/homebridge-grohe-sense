@@ -8,20 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.5.0] - 2021-03-01
+## [Released]
+
+## [1.5.0] - 2021-04-24
 
 ### Added
 
 - Use superagent throttling to prevent Ondus API request rate limitations. 
-- TBD throttling: Figure out correct limits
-- DEBUG: Dump HTTP responses to figure out why undefined is being reported by users
+- SHTF mode added to config: Log various HTTP responses to figure out why undefined is being reported by users
 
 ### Changed 
 
 - Fixed characteristics warnings flagged by latest HAP-NodeJS version
 - Dependency updates: homebridge@1.3.1, typescript@4.2.2
-
-## [Released]
 
 ## [1.4.2] - 2020-09-16
 
