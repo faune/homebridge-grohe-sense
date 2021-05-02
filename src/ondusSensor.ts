@@ -1,46 +1,32 @@
-import { PlatformAccessory } from 'homebridge';
-//import fakegato from 'fakegato-history';
+import { PlatformAccessory, Service } from 'homebridge';
+import fakegato from 'fakegato-history';
 
-import { PLUGIN_VERSION } from './settings';
 import { OndusPlatform } from './ondusPlatform';
-//import { OndusThresholds } from './ondusThresholds';
-//import { OndusNotification, NOTIFICATION_CATEGORY_CRITICAL } from './ondusNotification';
+import { OndusThresholds } from './ondusThresholds';
+import { OndusNotification, NOTIFICATION_CATEGORY_CRITICAL } from './ondusNotification';
+import { OndusAppliance } from './ondusAppliance';
 
 /**
  * Platform Accessory
  * An instance of this class is created for each accessory your platform registers
  * Each accessory may expose multiple services of different service types.
  */
-export abstract class OndusAppliance {
-  static ONDUS_TYPE = 0;
-  static ONDUS_PROD = 'Grohe AG'
-  static ONDUS_NAME = 'Abstract';
-  // Hacky workaround for lack of reflection support in typescript
-  private ONDUS_MAP = {
-    101 : 'Sense',
-    102 : 'Sense Plus',
-    103 : 'Sense Guard',
-  }
-
-  //log: Logger;
-  logPrefix: string;
-  applianceID: string;
-
-  /*
+export abstract class OndusSensor extends OndusAppliance {
+  
   // Common sensor services
   leakService: Service;
   temperatureService: Service;
   historyService: fakegato.FakeGatoHistoryService;
-*/
+
   // Placeholders for common sensor data
-  //currentTimestamp: string;
-  //currentTemperature: number;
-  //leakDetected: boolean;
-  //thresholds: OndusThresholds;
+  currentTimestamp: string;
+  currentTemperature: number;
+  leakDetected: boolean;
+  thresholds: OndusThresholds;
 
   
   /**
-   * OndusAppliance abstract constructor
+   * OndusSensor abstract constructor
    */
   constructor(
     public ondusPlatform: OndusPlatform,
@@ -48,10 +34,8 @@ export abstract class OndusAppliance {
     public roomID: number,
     public accessory: PlatformAccessory,
   ) {
-    this.logPrefix = accessory.context.device.name;
-    this.applianceID = accessory.context.device.appliance_id;
+    super(ondusPlatform, locationID, roomID, accessory);
 
-    /*
     // Placeholders for common sensor data
     this.currentTemperature = 0;
     this.currentTimestamp = '';
@@ -60,27 +44,12 @@ export abstract class OndusAppliance {
 
     // Update configured threshold limits
     this.thresholds.update();
-    */
-
-    // set accessory information
-    const ondusType = accessory.context.device.type;
-    this.accessory.getService(this.ondusPlatform.Service.AccessoryInformation)!
-      .setCharacteristic(this.ondusPlatform.Characteristic.Manufacturer, OndusAppliance.ONDUS_PROD)
-      .setCharacteristic(this.ondusPlatform.Characteristic.Model, this.ONDUS_MAP[ondusType])
-      .setCharacteristic(this.ondusPlatform.Characteristic.Name, accessory.context.device.name)
-      .setCharacteristic(this.ondusPlatform.Characteristic.HardwareRevision, accessory.context.device.type.toString())
-      .setCharacteristic(this.ondusPlatform.Characteristic.SerialNumber, this.unhexlify(accessory.context.device.serial_number))
-      .setCharacteristic(this.ondusPlatform.Characteristic.FirmwareRevision, accessory.context.device.version)
-      .setCharacteristic(this.ondusPlatform.Characteristic.SoftwareRevision, PLUGIN_VERSION) 
-      .setCharacteristic(this.ondusPlatform.Characteristic.AppMatchingIdentifier, '1451814256');
-        
 
     // Initialize common sensor services
 
     /**
      * Leakage service
      */
-    /*
     this.leakService = this.accessory.getService(this.ondusPlatform.Service.LeakSensor) ||
       this.accessory.addService(this.ondusPlatform.Service.LeakSensor);
 
@@ -94,12 +63,12 @@ export abstract class OndusAppliance {
     // create handlers for required characteristics of Leak service
     this.leakService.getCharacteristic(this.ondusPlatform.Characteristic.LeakDetected)
       .on('get', this.handleLeakDetectedGet.bind(this));
-*/
+
       
     /**
      * Temperature Service
      */
-    /*
+
     // get the Temperature service if it exists, otherwise create a new Temperature service
     this.temperatureService = this.accessory.getService(this.ondusPlatform.Service.TemperatureSensor) ||
       this.accessory.addService(this.ondusPlatform.Service.TemperatureSensor);
@@ -115,12 +84,12 @@ export abstract class OndusAppliance {
     // create handlers for required characteristics of Temperature service
     this.temperatureService.getCharacteristic(this.ondusPlatform.Characteristic.CurrentTemperature)
       .on('get', this.handleCurrentTemperatureGet.bind(this));
-*/
+
 
     /**
      * History Service
      */
-    /*
+    
     // Initialize FakeGatoHistoryService
     if (this.ondusPlatform.config['fakegato_support']) {
       const FakeGatoHistoryService = fakegato(this.ondusPlatform.api);
@@ -131,7 +100,7 @@ export abstract class OndusAppliance {
     } else {
       this.historyService = null;
     }
-    */
+    
   }
 
   /**
@@ -147,16 +116,15 @@ export abstract class OndusAppliance {
 
   /**
    * This function must be overloaded in order to reset
-   * all appliance StatusFault characteristics
+   * all sensor StatusFault characteristics
    */
-  /*
   resetAllStatusFaults() {
     this.setLeakServiceStatusFault(false);
     this.setTemperatureServiceStatusFault(false);
   }
-*/
+
   // ---- CHARACTERISTICS HANDLER FUNCTIONS BELOW ----
-  /*
+
   setLeakServiceLeakDetected(action: boolean) {
     if (action) {
       this.leakService.updateCharacteristic(this.ondusPlatform.Characteristic.LeakDetected, 
@@ -171,9 +139,11 @@ export abstract class OndusAppliance {
     if (action) {
       this.leakService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusActive, 
         this.ondusPlatform.Characteristic.Active.ACTIVE);
+      this.ondusPlatform.log.debug(`[${this.logPrefix}] LEAK SERVICE ACTIVE!`);
     } else {
       this.leakService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusActive, 
         this.ondusPlatform.Characteristic.Active.INACTIVE);
+      this.ondusPlatform.log.debug(`[${this.logPrefix}] LEAK SERVICE INACTIVE!`);
     }
   }
 
@@ -181,9 +151,11 @@ export abstract class OndusAppliance {
     if (action) {
       this.leakService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
         this.ondusPlatform.Characteristic.StatusFault.GENERAL_FAULT);
+      this.ondusPlatform.log.debug(`[${this.logPrefix}] LEAK SERVICE GENERAL FAULT!`);
     } else {
       this.leakService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
-        this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);      
+        this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
+      this.ondusPlatform.log.debug(`[${this.logPrefix}] LEAK SERVICE NO FAULT!`);
     }
   }
 
@@ -191,9 +163,11 @@ export abstract class OndusAppliance {
     if (action) {
       this.temperatureService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusActive, 
         this.ondusPlatform.Characteristic.Active.ACTIVE);
+      this.ondusPlatform.log.debug(`[${this.logPrefix}] TEMP SERVICE ACTIVE!`);
     } else {
       this.temperatureService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusActive, 
-        this.ondusPlatform.Characteristic.Active.INACTIVE);      
+        this.ondusPlatform.Characteristic.Active.INACTIVE);
+      this.ondusPlatform.log.debug(`[${this.logPrefix}] TEMP SERVICE INACTIVE!`);
     }
   }
 
@@ -201,12 +175,14 @@ export abstract class OndusAppliance {
     if (action) {
       this.temperatureService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
         this.ondusPlatform.Characteristic.StatusFault.GENERAL_FAULT);
+      this.ondusPlatform.log.debug(`[${this.logPrefix}] TEMP SERVICE GENERAL FAULT!`);
     } else {
       this.temperatureService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
-        this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);      
+        this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
+      this.ondusPlatform.log.debug(`[${this.logPrefix}] TEMP SERVICE NO FAULT!`);
     }
   }
-*/
+
 
   // ---- HTTP HANDLER FUNCTIONS BELOW ----
 
@@ -214,7 +190,7 @@ export abstract class OndusAppliance {
   /**
    * Handle requests to get the current value of the "LeakDetected" characteristics
    * 
-   * Fetch all unread notifications for this appliance from the Ondus API.
+   * Fetch all unread notifications for this sensor from the Ondus API.
    * 
    * If one or more category 30 notification is encountered, the leakService will
    * trigger a LEAK_DETECTED. This also means that the only way to clear LEAK_DETECTED
@@ -222,12 +198,11 @@ export abstract class OndusAppliance {
    * behavior as either read or delete them altogether from the Ondus API.
    * 
    * NOTE: 
-   * This is the only handler for this class that must fetch and process appliance notifications 
+   * This is the only handler for this class that must fetch and process sensor notifications 
    * directly from the Ondus API upon request, because the Sense and Guard can potentially report 
    * new notifications if a configured threshold has been exceeded within the last hours, or if 
    * a leak is detected.
    */
-  /*
   handleLeakDetectedGet(callback) {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET LeakDetected:`);
 
@@ -282,139 +257,19 @@ export abstract class OndusAppliance {
         callback(err, this.leakDetected);
       });
   }
-*/
+
   /**
    * Handle requests to get the current value of the "Current Temperature" characteristic
    * 
    * This function should be overloaded depending on the strategy for fetching new temperature data
    */
-  /*
   handleCurrentTemperatureGet(callback) {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET CurrentTemperature`);
     callback(null, this.currentTemperature);
   }
 
-  */
  
-  // ---- UTILITY FUNCTIONS BELOW ----
+  
 
-  /**
-   * Convert decimal encoded HEX string to hexadecimal encoded HEX string 
-   */
-  public unhexlify(str: string) {
-    let result = '';
-    for (let i=0, l=str.length; i<l; i+=2) {
-      result += String.fromCharCode(parseInt(str.substr(i, 2), 16));
-    }
-    return result;
-  }
- 
-  // ---- HELPER FUNCTIONS BELOW HANDLING ONDUS IDs AUTOMATICALLY ----
-
-  public getLocationID() {
-    return this.locationID;
-  }
-
-  public getRoomID() {
-    return this.roomID;
-  }
-
-  public getApplianceID() {
-    return this.applianceID;
-  }
-
-  /**
-   * Retrieve appliance info like appliance ID, type, and name as a JSON object 
-   */
-  public async getApplianceInfo() {
-    return this.ondusPlatform.ondusSession.getApplianceInfo(
-      this.getLocationID(),
-      this.getRoomID(), 
-      this.getApplianceID());
-  }
-
-  /**
-   * Make sure accessory context device is updated with the latest appliance info,
-   * else the last available data will not be fetched 
-   */
-  async updateApplianceInfo() {
-    this.ondusPlatform.log.debug(`[${this.logPrefix}] Updating appliance info`);
-    this.getApplianceInfo()
-      .then( info => {
-        // Dump server response for debugging purpose if SHTF mode is enabled
-        if (this.ondusPlatform.config['shtf_mode']) {
-          const debug = JSON.stringify(info.body);
-          this.ondusPlatform.log.debug(`[${this.logPrefix}] updateApplianceInfo().getApplianceInfo() API RSP:\n"${debug}"`);
-        }
-
-        this.accessory.context.device = info.body[0];
-        //this.thresholds.update();
-      })
-      .catch( err => {
-        this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to update appliance info: ${err}`);
-      });
-  }
-
-  /**
-   * Retrieve appliance notifications as a JSON object.
-   * 
-   * Will only return data if messages are marked as unread on the web service
-   */
-  public async getApplianceNotifications() {
-    return this.ondusPlatform.ondusSession.getApplianceNotifications(
-      this.getLocationID(), 
-      this.getRoomID(), 
-      this.getApplianceID());
-  }
-
-  /**
-   * Retrieve appliance measurements as a JSON object
-   * 
-   * @param fromDate Optional Date argument when to fetch measurements from
-   */
-  public async getApplianceMeasurements(fromDate?: Date, toDate?: Date) {
-    return this.ondusPlatform.ondusSession.getApplianceMeasurements(
-      this.getLocationID(), 
-      this.getRoomID(), 
-      this.getApplianceID(), 
-      fromDate,
-      toDate);
-  }
-
-  /**
-   * Retrieve appliance status like wifi quality, battery, 
-   * and connection status as a JSON object
-   */
-  public async getApplianceStatus() {
-    return this.ondusPlatform.ondusSession.getApplianceStatus(
-      this.getLocationID(), 
-      this.getRoomID(), 
-      this.getApplianceID());
-  }
-
-  /**
-   * Retrieve appliance command
-   */
-  public async getApplianceCommand() {
-    return this.ondusPlatform.ondusSession.getApplianceCommand(
-      this.getLocationID(),
-      this.getRoomID(),
-      this.getApplianceID());
-  }
-
-  /**
-   * Send new appliance command 
-   * 
-   * @param data JSON object containing new appliance configuration 
-   */
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  public async setApplianceCommand(data) {
-    return this.ondusPlatform.ondusSession.setApplianceCommand(
-      this.getLocationID(),
-      this.getRoomID(),
-      this.getApplianceID(),
-      data,
-    );
-  }
 
 }

@@ -1,7 +1,7 @@
 import moment from 'moment';
 import { PlatformAccessory, Service } from 'homebridge';
 
-import { OndusAppliance } from './ondusAppliance';
+import { OndusSensor } from './ondusSensor';
 import { OndusPlatform } from './ondusPlatform';
 
 
@@ -20,7 +20,7 @@ import { OndusPlatform } from './ondusPlatform';
  * 
  */
 
-export class OndusSensePlus extends OndusAppliance {
+export class OndusSensePlus extends OndusSensor {
   static ONDUS_TYPE = 102;
   static ONDUS_NAME = 'Sense Plus';
 
@@ -93,7 +93,9 @@ export class OndusSensePlus extends OndusAppliance {
     }
     setInterval( () => { 
       // Make sure accessory context device has the latest appliance info
-      this.updateApplianceInfo(); 
+      this.updateApplianceInfo();
+      // Update thresholds after receiving new appliance info
+      this.thresholds.update();
       // Fetch new data
       this.getLastMeasurements();
       this.getStatus();

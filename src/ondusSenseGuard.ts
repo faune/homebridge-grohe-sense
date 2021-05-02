@@ -1,9 +1,7 @@
-import moment from 'moment';
 import { Service, PlatformAccessory } from 'homebridge';
 
 import { OndusPlatform } from './ondusPlatform';
 import { OndusAppliance } from './ondusAppliance';
-
 
 /**
  * Grohe Sense Guard Accessory for the Ondus platform
@@ -11,7 +9,6 @@ import { OndusAppliance } from './ondusAppliance';
  * This accessory exposes the following services:
  * - Temperature
  * - Leakage
- * - Valve 
  * 
  * In addition the following metrics are logged, but not exposed in HomeKit:
  * - Water pressure
@@ -20,7 +17,7 @@ import { OndusAppliance } from './ondusAppliance';
  */
 export class OndusSenseGuard extends OndusAppliance {
   static ONDUS_TYPE = 103;
-  static ONDUS_NAME = 'Sense Guard';
+  static ONDUS_NAME = 'Sense Guard Switch';
 
   static VALVE_OPEN = true;
   static VALVE_CLOSED = false;
@@ -30,8 +27,6 @@ export class OndusSenseGuard extends OndusAppliance {
 
   // Extended sensor data properties
   private currentValveState: boolean = OndusSenseGuard.VALVE_OPEN || OndusSenseGuard.VALVE_CLOSED;
-  private currentFlowRate: number;
-  private currentPressure: number;
  
   /**
    * Ondus Sense Guard constructor for mains powered water control valve
@@ -46,13 +41,9 @@ export class OndusSenseGuard extends OndusAppliance {
   ) {
     super(ondusPlatform, locationID, roomID, accessory);
 
-    // Set extended sensor data to default values
+    // Set value default value
     this.currentValveState = OndusSenseGuard.VALVE_OPEN;
-    this.currentFlowRate = 0;
-    this.currentPressure = 0;
       
-    // Initialize extended sensor services
-
     /**
      * Valve service
      * 
@@ -66,6 +57,7 @@ export class OndusSenseGuard extends OndusAppliance {
     // get the Valve service if it exists, otherwise create a new Valve service
     this.valveService = this.accessory.getService(this.ondusPlatform.Service.Valve) ||
       this.accessory.addService(this.ondusPlatform.Service.Valve);
+    
     
     // set the Valve service characteristics
     this.valveService
@@ -83,16 +75,12 @@ export class OndusSenseGuard extends OndusAppliance {
   }
 
 
-  start() {
-    if (this.historyService) {
-      this.getHistoricalMeasurements();
-    }
+  start(): void {
+    return; 
   }
 
 
   resetAllStatusFaults() {
-    this.setLeakServiceStatusFault(false);
-    this.setTemperatureServiceStatusFault(false);
     this.setValveServiceStatusFault(false);
   }
 
@@ -144,20 +132,6 @@ export class OndusSenseGuard extends OndusAppliance {
   // ---- HTTP HANDLER FUNCTIONS BELOW ----
 
   /**
-   * Handle requests to get the current value of the "Current Temperature" characteristic
-   */
-  handleCurrentTemperatureGet(callback) {
-    this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET CurrentTemperature`);
-    this.getLastMeasurements()
-      .then ( () => {
-        callback(null, this.currentTemperature);
-      })
-      .catch( err => {
-        callback(err, this.currentTemperature);
-      });
-  }
-
-  /**
    * Handle requests to get the current value of the "Active" characteristic
    */
   handleValveServiceActiveGet(callback) {
@@ -198,157 +172,7 @@ export class OndusSenseGuard extends OndusAppliance {
     }
   }
 
-  /**
-   * Handle requests to get the current value of the "In Use" characteristic
-   * 
-   * This does not return InUse characteristics in real-time, but depends on the
-   * getCurrentTemperatureGet() method, which - in addition to temperature - 
-   * also extracts the flowrate and water pressure. 
-   * 
-   * Current assumption is that the getCurrentTemperatureGet() method will most 
-   * likely be triggered when handleInUseGet() is triggered.
-   */
-  handleInUseGet(callback) {
-    this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET InUse`);
-    callback(null, (this.currentFlowRate > 0 ? this.ondusPlatform.Characteristic.InUse.IN_USE : 
-      this.ondusPlatform.Characteristic.InUse.NOT_IN_USE));
-  
-  }
-
   // ---- ONDUS API FUNCTIONS BELOW ----
-
-
-  /**
-   * Fetch Ondus Sense historical measurement data from the Ondus API. Returns a promise that will be resolved
-   * once measurement data has been queried from the Ondus API.
-  */
-  getHistoricalMeasurements() {
-    this.ondusPlatform.log.debug(`[${this.logPrefix}] Fetching historical temperature, flowrate, and pressure levels`);
-    // Fetch all registered appliance measurements
-    // If no measurements are present, the following is returned {"code":404,"message":"Not found"}
-
-    this.getApplianceMeasurements()
-      .then( measurement => {
-
-        // Dump server response for debugging purpose if SHTF mode is enabled
-        if (this.ondusPlatform.config['shtf_mode']) {
-          const debug = JSON.stringify(measurement.body);
-          this.ondusPlatform.log.debug(`[${this.logPrefix}] getHistoricalMeasurements().getApplianceMeasurements() API RSP:\n"${debug}"`);
-        }
-
-        if ((measurement.body.data !== undefined) && (Array.isArray(measurement.body.data.measurement))) {
-          const measurementArray = measurement.body.data.measurement;
-          this.ondusPlatform.log.debug(`[${this.logPrefix}] Retrieved ${measurementArray.length} historical measurements`);
-          measurementArray.sort((a, b) => {
-            const a_ts = new Date(a.timestamp).getTime();
-            const b_ts = new Date(b.timestamp).getTime();
-            if(a_ts > b_ts) {
-              return 1;
-            } else if(a_ts < b_ts) {
-              return -1;
-            } else {
-              return 0;
-            }
-          });
-
-          // Add historical measurements to historyService
-          if (this.historyService) {
-            measurementArray.forEach( value => {
-              this.historyService.addEntry({time: moment(value.timestamp).unix(), 
-                temp: value.temperature_guard});
-            });
-          }
-        } else {
-          this.ondusPlatform.log.debug(`[${this.logPrefix}] No historical data returned`);
-        }
-      })
-      .catch( err => {
-        this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to retrieve historical temperature, flowrate, and pressure: ${err}`);
-      });
-  }
-
-
-  /**
-  * Fetch Ondus Sense Guard measurement data. Returns a promise that will be resolved
-   * once measurement data has been queried from the Ondus API.
-  */
-  getLastMeasurements() {
-    this.ondusPlatform.log.debug(`[${this.logPrefix}] Updating temperature, flowrate, and pressure levels`);
-
-    // Fetch appliance measurements using current timestamp
-    // If no measurements are present, the following is returned {"code":404,"message":"Not found"}
-
-    // Use last update timestamp from service for querying latest measurements
-
-    // Return new promise to caller before calling into async function, and resolve 
-    // this promise when getApplianceCommand promise has been resolved and result processed.
-    // This will prevent handleActiveGet() function returning incorrect value for currentValveState
-    return new Promise<number>((resolve, reject) => {
-      
-      // Get fromDate measurements
-      const fromDate = new Date(Date.now());
-
-      // Retrieve latest Sense Guard measurement metrics
-      this.getApplianceMeasurements(fromDate)
-        .then( measurement => {
-          //this.ondusPlatform.log.debug('res: ', measurement);
-          const measurementArray = measurement.body.data.measurement;
-          if (!Array.isArray(measurementArray)) {
-            this.ondusPlatform.log.debug(`[${this.logPrefix}] Unknown response ${measurement.body}`);
-          }
-          this.ondusPlatform.log.debug(`[${this.logPrefix}] Retrieved ${measurementArray.length} measurements - picking last one`);
-          measurementArray.sort((a, b) => {
-            const a_ts = new Date(a.timestamp).getTime();
-            const b_ts = new Date(b.timestamp).getTime();
-            if(a_ts > b_ts) {
-              return 1;
-            } else if(a_ts < b_ts) {
-              return -1;
-            } else {
-              return 0;
-            }
-          });
-
-          // Add last measurements to historyService
-          if (this.historyService) {
-            measurementArray.forEach( value => {
-              this.historyService.addEntry({time: moment(value.timestamp).unix(), 
-                temp: value.temperature_guard});
-            });
-          }
-
-          // Extract latest sensor data
-          const lastMeasurement = measurementArray.slice(-1)[0];
-          this.currentTimestamp = lastMeasurement.timestamp;    
-          this.currentFlowRate = lastMeasurement.flowrate;
-          this.currentPressure = lastMeasurement.pressure;
-          this.currentTemperature = lastMeasurement.temperature_guard;
-          const valveState = this.currentValveState === OndusSenseGuard.VALVE_OPEN? 'Open': 'Closed';
-          this.ondusPlatform.log.info(`[${this.logPrefix}] Timestamp: ${this.currentTimestamp}`);          
-          this.ondusPlatform.log.info(`[${this.logPrefix}] => Valve: ${valveState}`);
-          this.ondusPlatform.log.info(`[${this.logPrefix}] => Flowrate: ${this.currentFlowRate}`);
-          this.ondusPlatform.log.info(`[${this.logPrefix}] => Pressure: ${this.currentPressure} bar`);
-          this.ondusPlatform.log.info(`[${this.logPrefix}] => Temperature: ${this.currentTemperature}˚C`);
-
-          // Enable StatusActive characteristics for temperature service
-          this.setTemperatureServiceStatusActive(true);
-        
-          // Resolve promise to handleCurrentTemperatureGet()
-          resolve(this.currentTemperature);
-        })
-        .catch( err => {
-          this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to update temperature: ${err}`);
-      
-          // Disable StatusActive characteristics for temperature service
-          this.setTemperatureServiceStatusActive(false);
-        
-          // Reject promise to handleCurrentTemperatureGet() and return last known temperature
-          reject(this.currentTemperature);
-        });
-    });
-  }
-
-
 
   /**
    * Retrieve Sense Guard valve state. Returns a promise that will be resolved
