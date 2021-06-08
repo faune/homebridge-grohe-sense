@@ -52,7 +52,7 @@ export class OndusSession {
 
     // Parse config
     if (config['refresh_token'] && (config['refresh_token'] !== '<Paste refresh token here>')) {
-      this.log.debug('refreshToken: ', config['refresh_token']);
+      this.log.debug('refreshToken: ', '<secret>');
       this.refreshToken = config['refresh_token'];
     }
     if (config['username']) {
@@ -325,6 +325,14 @@ export class OndusSession {
           }
         });
     });
+  }
+
+  /**
+   * Retrieve all dashboard information as a JSON object
+   */
+  public async getDashboard() {
+    this.log.debug('getDashboard(): Retrieving dashboard information');
+    return this.getURL(`${this.BASE_URL}/dashboard`);
   }
 
   /**

@@ -102,10 +102,19 @@ export class OndusPlatform implements DynamicPlatformPlugin {
       return;
     }
     
+    // Dump dashboard info for debugging purpose if SHTF mode is enabled
+    if (this.config['shtf_mode']) {
+      await this.ondusSession.getDashboard()
+        .then(dashboard => {
+          const debug = JSON.stringify(dashboard.body, null, ' ');
+          this.log.debug(`discoverDevices().getDashboard() API RSP:\n${debug}`);
+        });
+    }
+
     // Retrieve all locations
     await this.ondusSession.getLocations()
       .then(locations => {
-        //this.log.debug('Iterating over locations: ', locations.body);
+        // Iterate over all registered locations
         locations.body.forEach(async location => {
           
           // Retrieve registered rooms for a location
