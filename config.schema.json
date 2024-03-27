@@ -52,7 +52,7 @@
         "description":"If you experience HTTP error \"Too Many Requests\" its time to enable Throttling! Note that this can slow you Homebridge instance down, so you need to play with the limits below to hit that special sweetspot for yourself.",
         "type": "boolean",
         "required": false,
-        "default": false
+        "default": true
       },
       "throttle_rate" : {
         "title":"Throttle rate",
