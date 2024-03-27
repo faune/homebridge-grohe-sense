@@ -7,10 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.5.1] - 2021-06-01
+## [1.5.1] - 2024-03-27
 
 ### Added
 
+- Adapted code to Grohe REST API changes
+- Made throttling enabled by default, because a change in superagent 
+  throttle caused API queries to pause unless throttling is enabled.
 - More debug statements
 - Updated dependencies with vulnerabilities as flagged by Dependabot 
 - Started on Grohe Blue/Red support
