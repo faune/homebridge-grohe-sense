@@ -163,8 +163,8 @@ export class OndusSensePlus extends OndusAppliance {
         // Sort historical measurements
         this.ondusPlatform.log.debug(`[${this.logPrefix}] Retrieved ${measurementArray.length} historical measurements`);
         measurementArray.sort((a, b) => {
-          const a_ts = new Date(a.timestamp).getTime();
-          const b_ts = new Date(b.timestamp).getTime();
+          const a_ts = new Date(a.date).getTime();
+          const b_ts = new Date(b.date).getTime();
           if(a_ts > b_ts) {
             return 1;
           } else if(a_ts < b_ts) {
@@ -177,17 +177,17 @@ export class OndusSensePlus extends OndusAppliance {
         // Add historical measurements to historyService
         if (this.historyService) {
           measurementArray.forEach( value => {
-            this.historyService.addEntry({time: moment(value.timestamp).unix(), 
+            this.historyService.addEntry({time: moment(value.date).unix(), 
               temp: value.temperature, humidity: value.humidity});
           });
         }
 
         // Extract latest sensor data
         const lastMeasurement = measurementArray.slice(-1)[0];
-        this.currentTimestamp = lastMeasurement.timestamp;
+        this.currentDate = lastMeasurement.date;
         this.currentTemperature = lastMeasurement.temperature;
         this.currentHumidity = lastMeasurement.humidity;
-        this.ondusPlatform.log.info(`[${this.logPrefix}] Timestamp: ${this.currentTimestamp}`);
+        this.ondusPlatform.log.info(`[${this.logPrefix}] Date: ${this.currentDate}`);
         this.ondusPlatform.log.info(`[${this.logPrefix}] => Temperature: ${this.currentTemperature}˚C`);
         this.ondusPlatform.log.info(`[${this.logPrefix}] => Humidity: ${this.currentHumidity}% RF`);
 
@@ -214,10 +214,10 @@ export class OndusSensePlus extends OndusAppliance {
   getLastMeasurements() {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Updating temperature and humidity levels`);
 
-    // Fetch appliance measurements using current timestamp
+    // Fetch appliance measurements using current date
     // If no measurements are present, the following is returned {"code":404,"message":"Not found"}
 
-    // Use last update timestamp from service for querying latest measurements
+    // Use last update date from service for querying latest measurements
     const todayDate = new Date(Date.now());
     const fromDate = new Date(this.accessory.context.device.tdt);
     const diffMsec = todayDate.getTime() - fromDate.getTime();
@@ -238,8 +238,8 @@ export class OndusSensePlus extends OndusAppliance {
         // Sort and retrieve last measurement
         this.ondusPlatform.log.debug(`[${this.logPrefix}] Retrieved ${measurementArray.length} measurements - picking latest one`);
         measurementArray.sort((a, b) => {
-          const a_ts = new Date(a.timestamp).getTime();
-          const b_ts = new Date(b.timestamp).getTime();
+          const a_ts = new Date(a.date).getTime();
+          const b_ts = new Date(b.date).getTime();
           if(a_ts > b_ts) {
             return 1;
           } else if(a_ts < b_ts) {
@@ -252,17 +252,17 @@ export class OndusSensePlus extends OndusAppliance {
         // Add retrieved measurements from last day to historyService
         if (this.historyService) {
           measurementArray.forEach( value => {
-            this.historyService.addEntry({time: moment(value.timestamp).unix(), 
+            this.historyService.addEntry({time: moment(value.date).unix(), 
               temp: value.temperature, humidity: value.humidity});
           });
         }
 
         // Extract latest sensor data
         const lastMeasurement = measurementArray.slice(-1)[0];
-        this.currentTimestamp = lastMeasurement.timestamp;
+        this.currentDate = lastMeasurement.date;
         this.currentTemperature = lastMeasurement.temperature;
         this.currentHumidity = lastMeasurement.humidity;
-        this.ondusPlatform.log.info(`[${this.logPrefix}] Timestamp: ${this.currentTimestamp}`);
+        this.ondusPlatform.log.info(`[${this.logPrefix}] Date: ${this.currentDate}`);
         this.ondusPlatform.log.info(`[${this.logPrefix}] => Temperature: ${this.currentTemperature}˚C`);
         this.ondusPlatform.log.info(`[${this.logPrefix}] => Humidity: ${this.currentHumidity}% RF`);
 

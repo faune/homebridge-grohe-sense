@@ -34,7 +34,7 @@ export abstract class OndusAppliance {
   historyService: fakegato.FakeGatoHistoryService;
 
   // Placeholders for common sensor data
-  currentTimestamp: string;
+  currentDate: string;
   currentTemperature: number;
   leakDetected: boolean;
   thresholds: OndusThresholds;
@@ -54,7 +54,7 @@ export abstract class OndusAppliance {
 
     // Placeholders for common sensor data
     this.currentTemperature = 0;
-    this.currentTimestamp = '';
+    this.currentDate = '';
     this.leakDetected = false;
     this.thresholds = new OndusThresholds(this.ondusPlatform.log, this.accessory);
 
@@ -256,7 +256,7 @@ export abstract class OndusAppliance {
             }
             // Log each notification message regardless of category. These messages will be 
             // encountered and logged until they are marked as read in the Ondus mobile app
-            const notification = new OndusNotification(this, element.category, element.type, element.timestamp).getNotification();
+            const notification = new OndusNotification(this, element.category, element.type, element.date).getNotification();
             this.ondusPlatform.log.warn(`[${this.logPrefix}] ${notification}`);
           });
         }

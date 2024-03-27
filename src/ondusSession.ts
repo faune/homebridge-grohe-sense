@@ -399,7 +399,7 @@ export class OndusSession {
   public async getApplianceMeasurements(locationID: number, roomID: number, applianceID: string, fromDate?: Date, toDate?: Date) {
     this.log.debug(`getApplianceInfo(): Retrieving info about locationID=${locationID} roomID=${roomID} applianceID=${applianceID}`);
 
-    let url = `${this.BASE_URL}/locations/${locationID}/rooms/${roomID}/appliances/${applianceID}/data`;
+    let url = `${this.BASE_URL}/locations/${locationID}/rooms/${roomID}/appliances/${applianceID}/data/aggregated`;
     if (fromDate) {
       const fromStr = fromDate.toISOString().split('T')[0];
       url += `?from=${fromStr}`;
