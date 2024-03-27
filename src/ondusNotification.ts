@@ -26,11 +26,11 @@ export class OndusNotification {
     private appliance: OndusAppliance,
     private category: number,
     private type: number,
-    private timestamp: string,
+    private date: string,
   ) {
     this.category = category;
     this.type = type;
-    this.timestamp = timestamp;
+    this.date = date;
     this.appliance = appliance;
     this.thresholds = this.appliance.thresholds;
 
@@ -118,7 +118,7 @@ export class OndusNotification {
     if (!notification) {
       notification = `Unknown notification category=${this.category} type=${this.type}`;
     }
-    const message = `${this.timestamp} => ${notification}`;
+    const message = `${this.date} => ${notification}`;
     return message;
 
   }

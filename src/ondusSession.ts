@@ -52,7 +52,7 @@ export class OndusSession {
 
     // Parse config
     if (config['refresh_token'] && (config['refresh_token'] !== '<Paste refresh token here>')) {
-      this.log.debug('refreshToken: ', config['refresh_token']);
+      this.log.debug('refreshToken: ', '<secret>');
       this.refreshToken = config['refresh_token'];
     }
     if (config['username']) {
@@ -328,6 +328,14 @@ export class OndusSession {
   }
 
   /**
+   * Retrieve all dashboard information as a JSON object
+   */
+  public async getDashboard() {
+    this.log.debug('getDashboard(): Retrieving dashboard information');
+    return this.getURL(`${this.BASE_URL}/dashboard`);
+  }
+
+  /**
    * Retrieve all registered locations for the acquired access token as a JSON object
    */
   public async getLocations() {
@@ -391,7 +399,7 @@ export class OndusSession {
   public async getApplianceMeasurements(locationID: number, roomID: number, applianceID: string, fromDate?: Date, toDate?: Date) {
     this.log.debug(`getApplianceInfo(): Retrieving info about locationID=${locationID} roomID=${roomID} applianceID=${applianceID}`);
 
-    let url = `${this.BASE_URL}/locations/${locationID}/rooms/${roomID}/appliances/${applianceID}/data`;
+    let url = `${this.BASE_URL}/locations/${locationID}/rooms/${roomID}/appliances/${applianceID}/data/aggregated`;
     if (fromDate) {
       const fromStr = fromDate.toISOString().split('T')[0];
       url += `?from=${fromStr}`;

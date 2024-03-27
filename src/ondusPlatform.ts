@@ -5,7 +5,8 @@ import { OndusSession } from './ondusSession'; // Ondus HTTP library
 import { OndusSense } from './ondusSense';
 import { OndusSensePlus } from './ondusSensePlus';
 import { OndusSenseGuard } from './ondusSenseGuard';
-
+//import { OndusSenseBlue } from './ondusSenseBlue';
+//import { OndusSenseRed } from './ondusSenseRed';
 
 /**
  * Ondus Platform constructor
@@ -102,10 +103,19 @@ export class OndusPlatform implements DynamicPlatformPlugin {
       return;
     }
     
+    // Dump dashboard info for debugging purpose if SHTF mode is enabled
+    if (this.config['shtf_mode']) {
+      await this.ondusSession.getDashboard()
+        .then(dashboard => {
+          const debug = JSON.stringify(dashboard.body, null, ' ');
+          this.log.debug(`discoverDevices().getDashboard() API RSP:\n${debug}`);
+        });
+    }
+
     // Retrieve all locations
     await this.ondusSession.getLocations()
       .then(locations => {
-        //this.log.debug('Iterating over locations: ', locations.body);
+        // Iterate over all registered locations
         locations.body.forEach(async location => {
           
           // Retrieve registered rooms for a location
@@ -183,6 +193,16 @@ export class OndusPlatform implements DynamicPlatformPlugin {
         this.log.info(`Opening device handler "${OndusSenseGuard.ONDUS_NAME}" for "${applianceInfo.name}"`);
         new OndusSenseGuard(this, locationID, roomID, accessory).start();
         break;
+      /*  
+      case OndusSenseBlue.ONDUS_TYPE:
+        this.log.info(`Opening device handler "${OndusSenseBlue.ONDUS_NAME}" for "${applianceInfo.name}"`);
+        new OndusSenseBlue(this, locationID, roomID, accessory).start();
+        break;
+      case OndusSenseRed.ONDUS_TYPE:
+        this.log.info(`Opening device handler "${OndusSenseRed.ONDUS_NAME}" for "${applianceInfo.name}"`);
+        new OndusSenseRed(this, locationID, roomID, accessory).start();
+        break;
+      */
       default:
         this.log.warn(`Unsupported Ondus appliance type encountered: ${applianceInfo.type} - ignoring`);
         return;

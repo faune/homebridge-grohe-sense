@@ -17,9 +17,11 @@ export abstract class OndusAppliance {
   static ONDUS_NAME = 'Abstract';
   // Hacky workaround for lack of reflection support in typescript
   private ONDUS_MAP = {
-    101 : 'Sense',
-    102 : 'Sense Plus',
-    103 : 'Sense Guard',
+    101 : 'Sense',       // Mains powered leakage detector (obsoleted)
+    102 : 'Sense Plus',  // Battery operated leakage detector
+    103 : 'Sense Guard', // Main water inlet valve
+    104 : 'Sense Blue',  // Carbonated tap water
+    105 : 'Sense Red',   // Heated tap water
   }
 
   //log: Logger;
@@ -32,7 +34,7 @@ export abstract class OndusAppliance {
   historyService: fakegato.FakeGatoHistoryService;
 
   // Placeholders for common sensor data
-  currentTimestamp: string;
+  currentDate: string;
   currentTemperature: number;
   leakDetected: boolean;
   thresholds: OndusThresholds;
@@ -52,7 +54,7 @@ export abstract class OndusAppliance {
 
     // Placeholders for common sensor data
     this.currentTemperature = 0;
-    this.currentTimestamp = '';
+    this.currentDate = '';
     this.leakDetected = false;
     this.thresholds = new OndusThresholds(this.ondusPlatform.log, this.accessory);
 
@@ -254,7 +256,7 @@ export abstract class OndusAppliance {
             }
             // Log each notification message regardless of category. These messages will be 
             // encountered and logged until they are marked as read in the Ondus mobile app
-            const notification = new OndusNotification(this, element.category, element.type, element.timestamp).getNotification();
+            const notification = new OndusNotification(this, element.category, element.type, element.date).getNotification();
             this.ondusPlatform.log.warn(`[${this.logPrefix}] ${notification}`);
           });
         }

@@ -240,8 +240,8 @@ export class OndusSenseGuard extends OndusAppliance {
           const measurementArray = measurement.body.data.measurement;
           this.ondusPlatform.log.debug(`[${this.logPrefix}] Retrieved ${measurementArray.length} historical measurements`);
           measurementArray.sort((a, b) => {
-            const a_ts = new Date(a.timestamp).getTime();
-            const b_ts = new Date(b.timestamp).getTime();
+            const a_ts = new Date(a.date).getTime();
+            const b_ts = new Date(b.date).getTime();
             if(a_ts > b_ts) {
               return 1;
             } else if(a_ts < b_ts) {
@@ -254,7 +254,7 @@ export class OndusSenseGuard extends OndusAppliance {
           // Add historical measurements to historyService
           if (this.historyService) {
             measurementArray.forEach( value => {
-              this.historyService.addEntry({time: moment(value.timestamp).unix(), 
+              this.historyService.addEntry({time: moment(value.date).unix(), 
                 temp: value.temperature_guard});
             });
           }
@@ -275,10 +275,10 @@ export class OndusSenseGuard extends OndusAppliance {
   getLastMeasurements() {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Updating temperature, flowrate, and pressure levels`);
 
-    // Fetch appliance measurements using current timestamp
+    // Fetch appliance measurements using current date
     // If no measurements are present, the following is returned {"code":404,"message":"Not found"}
 
-    // Use last update timestamp from service for querying latest measurements
+    // Use last update date from service for querying latest measurements
 
     // Return new promise to caller before calling into async function, and resolve 
     // this promise when getApplianceCommand promise has been resolved and result processed.
@@ -298,8 +298,8 @@ export class OndusSenseGuard extends OndusAppliance {
           }
           this.ondusPlatform.log.debug(`[${this.logPrefix}] Retrieved ${measurementArray.length} measurements - picking last one`);
           measurementArray.sort((a, b) => {
-            const a_ts = new Date(a.timestamp).getTime();
-            const b_ts = new Date(b.timestamp).getTime();
+            const a_ts = new Date(a.date).getTime();
+            const b_ts = new Date(b.date).getTime();
             if(a_ts > b_ts) {
               return 1;
             } else if(a_ts < b_ts) {
@@ -312,19 +312,19 @@ export class OndusSenseGuard extends OndusAppliance {
           // Add last measurements to historyService
           if (this.historyService) {
             measurementArray.forEach( value => {
-              this.historyService.addEntry({time: moment(value.timestamp).unix(), 
+              this.historyService.addEntry({time: moment(value.date).unix(), 
                 temp: value.temperature_guard});
             });
           }
 
           // Extract latest sensor data
           const lastMeasurement = measurementArray.slice(-1)[0];
-          this.currentTimestamp = lastMeasurement.timestamp;    
+          this.currentDate = lastMeasurement.date;    
           this.currentFlowRate = lastMeasurement.flowrate;
           this.currentPressure = lastMeasurement.pressure;
           this.currentTemperature = lastMeasurement.temperature_guard;
           const valveState = this.currentValveState === OndusSenseGuard.VALVE_OPEN? 'Open': 'Closed';
-          this.ondusPlatform.log.info(`[${this.logPrefix}] Timestamp: ${this.currentTimestamp}`);          
+          this.ondusPlatform.log.info(`[${this.logPrefix}] Date: ${this.currentDate}`);          
           this.ondusPlatform.log.info(`[${this.logPrefix}] => Valve: ${valveState}`);
           this.ondusPlatform.log.info(`[${this.logPrefix}] => Flowrate: ${this.currentFlowRate}`);
           this.ondusPlatform.log.info(`[${this.logPrefix}] => Pressure: ${this.currentPressure} bar`);
