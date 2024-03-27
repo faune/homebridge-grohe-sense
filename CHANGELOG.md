@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0] - 2024-XX-XX
+
+### Added
+
+## [Released]
+
 ## [1.5.1] - 2024-03-27
 
 ### Added
@@ -17,9 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - More debug statements
 - Updated dependencies with vulnerabilities as flagged by Dependabot 
 - Started on Grohe Blue/Red support
-
-## [Released]
-
+≈
 ## [1.5.0] - 2021-04-24
 
 ### Added
