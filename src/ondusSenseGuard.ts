@@ -57,7 +57,7 @@ export class OndusSenseGuard extends OndusAppliance {
      * Valve service
      * 
      * A short summary for Active / InUse - Logic:
-     * Active=0, InUse=0 -> Off
+     * Active=0, InUse=0 -> Closed
      * Active=1, InUse=0 -> Waiting [Starting, Activated but no water flowing (yet)]
      * Active=1, InUse=1 -> Running
      * Active=0, InUse=1 -> Stopping
@@ -400,9 +400,20 @@ export class OndusSenseGuard extends OndusAppliance {
     if (valveState === OndusSenseGuard.VALVE_OPEN) {
       this.ondusPlatform.log.warn(`[${this.logPrefix}] Opening main water inlet valve`);
       this.setValveServiceActive(true);
+      setTimeout(() => {
+        // Need some delay for the Home app to correctly render the transition effect
+        // between closed -> waiting -> running 
+        this.setValveServiceInUse(true);
+      }, 50);
+      
     } else {
       this.ondusPlatform.log.warn(`[${this.logPrefix}] Closing main water inlet valve`);
-      this.setValveServiceActive(false);
+      this.setValveServiceInUse(false);
+      setTimeout(() => {
+        // Need some delay for the Home app to correctly render the transition effect
+        // between running -> stopping -> closed 
+        this.setValveServiceActive(false);
+      }, 50);
     }
 
     // Construct payload for controlling valve state
