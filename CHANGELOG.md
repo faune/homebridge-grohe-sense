@@ -13,6 +13,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Released]
 
+## [1.5.2] - 2024-04-05
+
+### Added
+
+- Fixed bugs when parsing notifications, including ignoring is_read
+  messages from the Ondus API. I believe Ondus API has changed behavior
+  here, so be warned that the homebridge-grohe-sense adaption might 
+  not be accurate ...
+- Added delay for valve status update to improve Home app rendering
+  when closing and opening the main water valve.
+- Added some previously unsupported notification types for Grohe 
+  Blue/Red and for Grohe Sense.
+
 ## [1.5.1] - 2024-03-27
 
 ### Added
@@ -23,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - More debug statements
 - Updated dependencies with vulnerabilities as flagged by Dependabot 
 - Started on Grohe Blue/Red support
-≈
+
 ## [1.5.0] - 2021-04-24
 
 ### Added
