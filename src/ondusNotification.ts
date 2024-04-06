@@ -40,10 +40,18 @@ export class OndusNotification {
         // NOTIFICATION_CATEGORY_FIRMWARE
         10 : {
           'type'  : {
-            60  : 'Firmware update available',
-            460 : 'Firmware update available',
+            10  : 'Sense integration successful',
+            60  : 'Sense firmware update available',
+            410 : 'Guard integration successful',
+            460 : 'Guard firmware update available',
+            555 : 'Blue auto-flush active',
+            556 : 'Blue auto-flush inactive',
+            557 : 'Blue empty CO2 cartridge',
+            559 : 'Blue cleaning completed',
+            560 : 'Blue firmware update available',
           },  
         },
+
         // NOTIFICATION_CATEGORY_WARNING
         20 : {
           'type' : {
@@ -54,13 +62,23 @@ export class OndusNotification {
             30  : `Humidity levels have dropped below the minimum configured limit of ${this.thresholds.getLowHumidLimit()}% RF`,
             31  : `Humidity levels have exceeded the maximum configured limit of ${this.thresholds.getHighHumidLimit()}% RF`,
             40  : `Frost warning! Current temperature is ${this.appliance.currentTemperature}˚C`,
-            80  : 'Lost WiFi',
+            80  : 'Guard lost WiFi connection',
             320 : 'Unusual water consumption detected - water has been SHUT OFF',
             321 : 'Unusual water consumption detected - water still ON',
             330 : 'Micro leakage detected',
             332 : 'Micro leakage detected over several days', // Unsure if this is correct?
             340 : `Frost warning! Current temperature is ${this.appliance.currentTemperature}˚C`,
-            380 : 'Lost WiFi',
+            380 : 'Sense lost WiFi connection',
+            420 : 'Repeated pressure problems detected over the last several hours - water has been SHUT OFF',
+            421 : 'Repeated pressure problems detected over the last several hours - water still ON',
+            550 : 'Blue filter low',
+            551 : 'Blue CO2 low',
+            552 : 'Blue filter empty',
+            553 : 'Blue CO2 empty',
+            564 : 'Blue filter stock is empty',
+            565 : 'Blue CO2 stock is empty',
+            558 : 'Blue cleaning needed',
+            580 : 'Blue lost WiFi connection',
           },
         },
         // NOTIFICATION_CATEGORY_CRITICAL
@@ -70,8 +88,8 @@ export class OndusNotification {
             0   : 'Flooding detected - water has been SHUT OFF',
             310 : 'Pipe break - water has been SHUT OFF',
             400 : 'Maximum water volume reached - water has been SHUT OFF',
-            430 : 'Water detected - water has been SHUT OFF',
-            431 : 'Water detected - water still ON',
+            430 : 'Water detected by Sense - water has been SHUT OFF',
+            431 : 'Water detected by Sense - water still ON',
           },
         },
       },
@@ -79,7 +97,7 @@ export class OndusNotification {
 
     switch(this.category) {
       case NOTIFICATION_CATEGORY_CRITICAL:
-        this.appliance.setLeakServiceLeakDetected(true);
+        this.appliance.leakDetected = true;
         break;
       case NOTIFICATION_CATEGORY_WARNING:
         switch(this.type) {
@@ -101,9 +119,10 @@ export class OndusNotification {
           case 321:
           case 330:
           case 332:
-            this.appliance.setLeakServiceStatusFault(true);
+          case 420:
+          case 421:
+            this.appliance.leakDetected = true;
             break;
-            
         }
         break;
     }

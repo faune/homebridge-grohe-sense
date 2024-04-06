@@ -4,7 +4,7 @@ import fakegato from 'fakegato-history';
 import { PLUGIN_VERSION } from './settings';
 import { OndusPlatform } from './ondusPlatform';
 import { OndusThresholds } from './ondusThresholds';
-import { OndusNotification, NOTIFICATION_CATEGORY_CRITICAL } from './ondusNotification';
+import { OndusNotification } from './ondusNotification';
 
 /**
  * Platform Accessory
@@ -242,21 +242,32 @@ export abstract class OndusAppliance {
         this.resetAllStatusFaults();
 
         // Log number of pending notifications
-        if (res.body.length === 0) {
+        let numOfPendingNotifications = 0;
+        if (res.body.length > 0) {
+          // For reasons unknown the Ondus API have started returning messages that
+          // are marked as read. This did not happen before, so until I figure out
+          // what has changed or Ondus API revert to the old behavior of only returning
+          // messages that havent been marked as read in the Ondus app we need to filter
+          // on the is_read property for each message.
+          res.body.forEach(element => {
+            if (element.is_read === false) {
+              numOfPendingNotifications+=1;
+            }
+          });
+        }
+
+        if (numOfPendingNotifications === 0) {
           this.ondusPlatform.log.info(`[${this.logPrefix}] No pending notifications`);
         } else {
-          this.ondusPlatform.log.info(`[${this.logPrefix}] Processing ${res.body.length} notifications ...`);
+          this.ondusPlatform.log.info(`[${this.logPrefix}] Processing ${numOfPendingNotifications} notifications ...`);
 
-          // Iterate over all notifications for this accessory
+          // Iterate over all unread notifications for this accessory
           res.body.forEach(element => {
-            if (element.category === NOTIFICATION_CATEGORY_CRITICAL ) {
-              // Check if notifications contained one or more category critical messages.
-              // If this is the case a leakage has been detected
-              this.leakDetected = true;
+            if (element.is_read === true) {
+              return;
             }
-            // Log each notification message regardless of category. These messages will be 
-            // encountered and logged until they are marked as read in the Ondus mobile app
-            const notification = new OndusNotification(this, element.category, element.type, element.date).getNotification();
+            // Log unread notification message
+            const notification = new OndusNotification(this, element.category, element.type, element.timestamp).getNotification();
             this.ondusPlatform.log.warn(`[${this.logPrefix}] ${notification}`);
           });
         }
