@@ -8,19 +8,20 @@ jobs:
 
     strategy:
       matrix:
-        # the Node.js versions to build on
-        node-version: [10.x, 12.x, 13.x]
+        # the Node.js versions supported by Homebridge v2
+        node-version: [22.x, 24.x]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-      - name: Use Node.js ${{ matrix.node-version }} 
-        uses: actions/setup-node@v1
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
+          cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Lint the project
         run: npm run lint
