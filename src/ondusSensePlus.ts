@@ -93,21 +93,9 @@ export class OndusSensePlus extends OndusAppliance {
       this.getLastMeasurements();
       this.getStatus();
     }, refreshInterval);
-  }
 
-  private getRefreshIntervalMs(): number {
-    const raw = this.ondusPlatform.config['refresh_interval'];
-    let seconds =
-      typeof raw === 'number' && Number.isFinite(raw)
-        ? raw
-        : Number(raw);
-    if (!Number.isFinite(seconds) || seconds <= 0) {
-      // eslint-disable-next-line max-len
-      this.ondusPlatform.log.warn(`[${this.logPrefix}] Refresh interval incorrectly configured in config.json — using default 3600 seconds`);
-      seconds = 3600;
-    }
-    seconds = Math.min(86400, Math.max(60, Math.round(seconds)));
-    return seconds * 1000;
+    // Poll notifications so LeakDetected changes are pushed to HomeKit automations
+    this.startLeakNotificationPolling();
   }
 
   resetAllStatusFaults() {

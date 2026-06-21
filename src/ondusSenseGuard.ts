@@ -80,6 +80,13 @@ export class OndusSenseGuard extends OndusAppliance {
     this.valveService.getCharacteristic(this.ondusPlatform.Characteristic.Active)
       .onGet(this.handleValveServiceActiveGet.bind(this))
       .onSet(this.handleValveServiceActiveSet.bind(this));
+
+    // Present the Guard primarily as a controllable valve. This accessory also
+    // exposes leak/temperature sensors, so without designating a primary service
+    // and category the Home app may classify the whole accessory as a sensor and
+    // not offer the valve as a selectable action in scenes/automations.
+    this.valveService.setPrimaryService(true);
+    this.accessory.category = this.ondusPlatform.api.hap.Categories.FAUCET;
   }
 
 
@@ -90,6 +97,9 @@ export class OndusSenseGuard extends OndusAppliance {
       void this.getLastMeasurements().catch(() => { /* errors logged in getLastMeasurements */ });
       void this.getValveState().catch(() => { /* errors logged in getValveState */ });
     }
+
+    // Poll notifications so LeakDetected changes are pushed to HomeKit automations
+    this.startLeakNotificationPolling();
   }
 
 

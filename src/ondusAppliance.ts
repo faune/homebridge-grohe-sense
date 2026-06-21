@@ -144,6 +144,42 @@ export abstract class OndusAppliance {
   }
 
   /**
+   * Resolve the configured refresh interval (in milliseconds), clamped to a
+   * sane range. Used both for measurement refresh and leak notification polling.
+   */
+  protected getRefreshIntervalMs(): number {
+    const raw = this.ondusPlatform.config['refresh_interval'];
+    let seconds =
+      typeof raw === 'number' && Number.isFinite(raw)
+        ? raw
+        : Number(raw);
+    if (!Number.isFinite(seconds) || seconds <= 0) {
+      // eslint-disable-next-line max-len
+      this.ondusPlatform.log.warn(`[${this.logPrefix}] Refresh interval incorrectly configured in config.json — using default 3600 seconds`);
+      seconds = 3600;
+    }
+    seconds = Math.min(86400, Math.max(60, Math.round(seconds)));
+    return seconds * 1000;
+  }
+
+  /**
+   * Periodically fetch appliance notifications from the Ondus API and push the
+   * resulting LeakDetected state into HomeKit. HomeKit automations are
+   * event-driven: an automation only fires when the accessory proactively
+   * pushes a characteristic change. Without this background poll the leak state
+   * would only be evaluated when the Home app happens to perform a GET, so a
+   * "leak detected" automation (e.g. announce on a HomePod) would never trigger.
+   */
+  protected startLeakNotificationPolling(): void {
+    const intervalMs = this.getRefreshIntervalMs();
+    // Evaluate once shortly after startup so HomeKit reflects the current state
+    void this.handleLeakDetectedGet().catch(() => { /* errors are logged inside the handler */ });
+    setInterval(() => {
+      void this.handleLeakDetectedGet().catch(() => { /* errors are logged inside the handler */ });
+    }, intervalMs);
+  }
+
+  /**
    * This function must be overloaded in order to reset
    * all appliance StatusFault characteristics
    */
