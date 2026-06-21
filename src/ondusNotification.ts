@@ -63,6 +63,7 @@ export class OndusNotification {
             31  : `Humidity levels have exceeded the maximum configured limit of ${this.thresholds.getHighHumidLimit()}% RF`,
             40  : `Frost warning! Current temperature is ${this.appliance.currentTemperature}˚C`,
             80  : 'Guard lost WiFi connection',
+            91  : 'Guard is offline - no connection to GROHE cloud',
             320 : 'Unusual water consumption detected - water has been SHUT OFF',
             321 : 'Unusual water consumption detected - water still ON',
             330 : 'Micro leakage detected',

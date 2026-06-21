@@ -200,7 +200,40 @@ export class OndusPlatform implements DynamicPlatformPlugin {
       */
       default:
         this.log.warn(`Unsupported Ondus appliance type encountered: ${applianceInfo.type} - ignoring`);
+        this.logUnsupportedAppliance(locationID, roomID, applianceInfo)
+          .catch(err => this.log.debug(`Failed to gather diagnostics for unsupported appliance: ${err}`));
         return;
     }
+  }
+
+  /**
+   * Gather and log the raw Ondus API payloads for an appliance type this plugin
+   * does not yet support (e.g. GROHE Blue/Red). The output is intended to be
+   * copied verbatim into a GitHub issue so support can be implemented without
+   * the maintainer needing physical access to the device.
+   */
+  private async logUnsupportedAppliance(locationID, roomID, applianceInfo) {
+    const applianceID = applianceInfo.appliance_id;
+    this.log.warn('==================== UNSUPPORTED GROHE APPLIANCE ====================');
+    this.log.warn(`Please share the following with a GitHub issue at ${PLUGIN_NAME} to help add support:`);
+    this.log.warn('https://github.com/faune/homebridge-grohe-sense/issues/new');
+    this.log.warn(`appliance (from getAppliances):\n${JSON.stringify(applianceInfo, null, 2)}`);
+
+    const dumps: [string, Promise<{ body: unknown }>][] = [
+      ['getApplianceInfo', this.ondusSession.getApplianceInfo(locationID, roomID, applianceID)],
+      ['getApplianceStatus', this.ondusSession.getApplianceStatus(locationID, roomID, applianceID)],
+      ['getApplianceCommand', this.ondusSession.getApplianceCommand(locationID, roomID, applianceID)],
+      ['getApplianceNotifications', this.ondusSession.getApplianceNotifications(locationID, roomID, applianceID)],
+    ];
+
+    for (const [label, request] of dumps) {
+      try {
+        const response = await request;
+        this.log.warn(`${label}:\n${JSON.stringify(response.body, null, 2)}`);
+      } catch (err) {
+        this.log.warn(`${label}: failed to retrieve (${err})`);
+      }
+    }
+    this.log.warn('=====================================================================');
   }
 }
