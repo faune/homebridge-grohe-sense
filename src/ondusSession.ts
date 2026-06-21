@@ -30,11 +30,11 @@ export class OndusSession {
   private refreshTimer: ReturnType<typeof setTimeout> | undefined;
 
   // Ondus URLs
-  BASE_URL = 'https://idp2-apigw.cloud.grohe.com/v3/iot'
+  BASE_URL = 'https://idp2-apigw.cloud.grohe.com/v3/iot';
   LOGIN_URL = this.BASE_URL + '/oidc/login';
   REFRESH_URL = this.BASE_URL + '/oidc/refresh';
   ACTION_URL = '';
-  TOKEN_URL = ''
+  TOKEN_URL = '';
 
   constructor(
     log: Logger,

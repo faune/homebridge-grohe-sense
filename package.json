@@ -24,7 +24,7 @@
     "img"
   ],
   "scripts": {
-    "lint": "eslint src/**.ts",
+    "lint": "eslint .",
     "watch": "npm run build && npm link && nodemon",
     "build": "rimraf ./dist && tsc",
     "prepublishOnly": "npm run lint && npm run build"
@@ -41,17 +41,17 @@
     "superagent-throttle": "^1.0.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.0.0",
     "@types/cheerio": "^0.22.31",
     "@types/superagent": "^8.1.2",
     "@types/node": "^20.11.1",
-    "@typescript-eslint/eslint-plugin": "^3.4.0",
-    "@typescript-eslint/parser": "^3.4.0",
-    "eslint": "^7.32.0",
+    "eslint": "^9.0.0",
     "homebridge": "^2.0.0",
-    "nodemon": "^2.0.16",
+    "nodemon": "^3.1.0",
     "rimraf": "^3.0.2",
     "ts-node": "^8.10.2",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "typescript-eslint": "^8.0.0"
   },
   "overrides": {
     "form-data": "^3.0.5"

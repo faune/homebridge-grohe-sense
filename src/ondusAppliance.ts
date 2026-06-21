@@ -13,7 +13,7 @@ import { OndusNotification } from './ondusNotification.js';
  */
 export abstract class OndusAppliance {
   static ONDUS_TYPE = 0;
-  static ONDUS_PROD = 'Grohe AG'
+  static ONDUS_PROD = 'Grohe AG';
   static ONDUS_NAME = 'Abstract';
   // Hacky workaround for lack of reflection support in typescript
   private ONDUS_MAP = {
@@ -22,7 +22,7 @@ export abstract class OndusAppliance {
     103 : 'Sense Guard', // Main water inlet valve
     104 : 'Sense Blue',  // Carbonated tap water
     105 : 'Sense Red',   // Heated tap water
-  }
+  };
 
   //log: Logger;
   logPrefix: string;
@@ -411,7 +411,6 @@ export abstract class OndusAppliance {
    * 
    * @param data JSON object containing new appliance configuration 
    */
-  // eslint-disable-next-line @typescript-eslint/ban-types
   public async setApplianceCommand(data) {
     return this.ondusPlatform.ondusSession.setApplianceCommand(
       this.getLocationID(),

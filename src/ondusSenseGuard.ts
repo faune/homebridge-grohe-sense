@@ -153,7 +153,7 @@ export class OndusSenseGuard extends OndusAppliance {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET CurrentTemperature`);
     try {
       await this.getLastMeasurements();
-    } catch (err) {
+    } catch {
       throw new this.ondusPlatform.api.hap.HapStatusError(this.ondusPlatform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
     }
     return this.currentTemperature;
@@ -167,7 +167,7 @@ export class OndusSenseGuard extends OndusAppliance {
     //this.ondusPlatform.log.debug('GET reporting: ', this.currentValveState);
     try {
       await this.getValveState();
-    } catch (err) {
+    } catch {
       throw new this.ondusPlatform.api.hap.HapStatusError(this.ondusPlatform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
     }
     return this.currentValveState;
@@ -188,7 +188,7 @@ export class OndusSenseGuard extends OndusAppliance {
         // Set valve state to value
         await this.setValveState(value === 1);
       }
-    } catch (err) {
+    } catch {
       // An error occured, so indicate this to HomeKit
       throw new this.ondusPlatform.api.hap.HapStatusError(this.ondusPlatform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
     }
