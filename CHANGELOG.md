@@ -7,11 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [2.0] - 2024-XX-XX
+## [2.0.0] - 2026-06-21
+
+This is a major release that makes the plugin fully compatible with Homebridge v2
+and modernizes the codebase. Homebridge v2 requires Node.js 22 or 24.
+
+NOTE: After updating, it is recommended to remove the cached Grohe accessories via
+the Homebridge UI (or remove and re-add the bridge in the Home app) so the updated
+services and characteristics are picked up cleanly.
 
 ### Added
 
-## [Released]
+- Homebridge v2 support. Updated engines to `node: ^22 || ^24` and
+  `homebridge: ^1.6 || ^2`.
+- Leak automations now work: appliance notifications are polled in the background
+  and the `LeakDetected` characteristic change is pushed to HomeKit, so a leak can
+  trigger Home app automations (e.g. announce on a HomePod). Note: Apple's Home app
+  hides leak sensors from the global automation picker, so create the automation
+  from the sensor's own device page.
+- The Sense Guard valve is now also exposed as a companion Switch when
+  `valve_control` is enabled, because Apple's Home app cannot use a Valve service in
+  automations. Use the switch to e.g. shut the water off when the last person leaves.
+- Diagnostic logging for unsupported appliance types (e.g. Grohe Blue/Red) dumps the
+  raw Ondus API payloads so owners can share them in a GitHub issue.
+- Notification category 20 / type 91 ("Guard is offline") is now recognized.
+- Automated npm publish GitHub Actions workflow and a Homebridge v2-ready README badge.
+
+### Changed
+
+- Migrated the project to native ECMAScript Modules (ESM).
+- Modernized all characteristic handlers from the deprecated `.on('get'/'set')`
+  callbacks to promise-based `onGet()`/`onSet()`.
+- Marked `LeakSensor` as the primary service on Sense/Sense Plus, and the valve as
+  the primary service on the Sense Guard.
+- Upgraded the toolchain: TypeScript 5.x, ESLint 9 (flat config), and updated CI to
+  build on Node 22/24.
+
+### Fixed
+
+- Fixed the Sense Guard valve and companion switch lagging and getting stuck on the
+  "Waiting..." animation. State is now served from cache instantly, refreshed in the
+  background, kept in sync across the valve and switch, and `InUse` always mirrors
+  `Active`. Commands update optimistically and revert if they fail.
+- The valve state is now fetched at startup even when Eve history support is enabled
+  (previously skipped) and refreshed periodically so changes made in the Grohe app
+  propagate to HomeKit.
+- Bumped `fakegato-history` to 0.6.7, fixing a crash on Homebridge v2 caused by the
+  removal of the deprecated `Characteristic.Formats`.
+- Updated the `cheerio` import for ESM compatibility, fixing a plugin load failure.
+- Renamed `Service.BatteryService` to `Service.Battery` for HAP-NodeJS v2.
+- Resolved all reported `npm audit` vulnerabilities.
 
 ## [1.5.2] - 2024-04-05
 
