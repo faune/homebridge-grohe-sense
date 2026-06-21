@@ -93,6 +93,11 @@ export abstract class OndusAppliance {
     this.leakService.getCharacteristic(this.ondusPlatform.Characteristic.LeakDetected)
       .onGet(this.handleLeakDetectedGet.bind(this));
 
+    // Present the appliance primarily as a leak sensor so the Home app shows it
+    // as a leak sensor tile (rather than defaulting to its temperature service).
+    // Note: the Sense Guard overrides this and sets its valve as primary instead.
+    this.leakService.setPrimaryService(true);
+
       
     /**
      * Temperature Service
