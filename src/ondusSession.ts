@@ -2,7 +2,7 @@ import { Logger, PlatformConfig } from 'homebridge';
 
 import superagent from 'superagent';
 import Throttle from 'superagent-throttle';
-import cheerio from 'cheerio';
+import { load } from 'cheerio';
 
 
 /**
@@ -169,7 +169,7 @@ export class OndusSession {
           this.sessionCookie = res.header['set-cookie'];
 
           // Parse HTML looking for action URL
-          const $ = cheerio.load(res.text);
+          const $ = load(res.text);
           this.ACTION_URL = $('form').attr()['action'];
           if (this.ACTION_URL.length > 0) {
             this.log.debug(`Found action URL for posting login credentials: ${this.ACTION_URL}`);

@@ -34,7 +34,7 @@
     "homebridge-plugin"
   ],
   "dependencies": {
-    "cheerio": "^1.0.0-rc.11",
+    "cheerio": "^1.0.0",
     "fakegato-history": "0.6.2",
     "moment": "^2.29.3",
     "superagent": "^5.3.1",
