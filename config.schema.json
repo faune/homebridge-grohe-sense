@@ -15,7 +15,7 @@
       },
       "valve_control" : {
         "title":"Control Sense Guard from HomeKit",
-        "description":"Only enable this checkbox if you really, really, REALLY think controlling your Sense Guard main water inlet valve from HomeKit is a good idea. If this option is left unchecked (or not configured in config.json) the default behavior is to simply display the current state of the valve. Requests to alter the valve state will be ignored.",
+        "description":"Only enable this checkbox if you really, really, REALLY think controlling your Sense Guard main water inlet valve from HomeKit is a good idea. If this option is left unchecked (or not configured in config.json) the default behavior is to simply display the current state of the valve. Requests to alter the valve state will be ignored. When enabled, a companion Switch (ON = valve open) is also exposed, because Apple's Home app cannot use a Valve in automations - select that switch for automations such as turning the water off when the last person leaves.",
         "type": "boolean",
         "required": false,
         "default": false

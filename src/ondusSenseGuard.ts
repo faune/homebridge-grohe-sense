@@ -27,6 +27,8 @@ export class OndusSenseGuard extends OndusAppliance {
 
   // Extended sensor services
   valveService: Service;
+  // Optional companion switch so the valve can be used in Home app automations
+  switchService?: Service;
 
   // Extended sensor data properties
   private currentValveState: boolean = OndusSenseGuard.VALVE_OPEN || OndusSenseGuard.VALVE_CLOSED;
@@ -83,10 +85,37 @@ export class OndusSenseGuard extends OndusAppliance {
 
     // Present the Guard primarily as a controllable valve. This accessory also
     // exposes leak/temperature sensors, so without designating a primary service
-    // and category the Home app may classify the whole accessory as a sensor and
-    // not offer the valve as a selectable action in scenes/automations.
+    // and category the Home app may classify the whole accessory as a sensor.
     this.valveService.setPrimaryService(true);
     this.accessory.category = this.ondusPlatform.api.hap.Categories.FAUCET;
+
+    /**
+     * Optional companion Switch service
+     *
+     * Apple's Home app does not expose Valve services to its automation engine
+     * (they can be controlled manually but are not selectable as automation
+     * actions or triggers). Whenever valve control is enabled we therefore also
+     * expose a Switch that mirrors the valve (On = open) and drives the same
+     * command, so the valve can be used in Home app automations such as
+     * "turn water off when last to leave". The switch is implicit with
+     * valve_control - without valve control there is nothing to automate.
+     */
+    const switchSubType = 'valve-control-switch';
+    if (this.ondusPlatform.config['valve_control']) {
+      const switchName = `${accessory.context.device.name} Water`;
+      this.switchService = this.accessory.getServiceById(this.ondusPlatform.Service.Switch, switchSubType) ||
+        this.accessory.addService(this.ondusPlatform.Service.Switch, switchName, switchSubType);
+      this.switchService.setCharacteristic(this.ondusPlatform.Characteristic.Name, switchName);
+      this.switchService.getCharacteristic(this.ondusPlatform.Characteristic.On)
+        .onGet(this.handleValveSwitchGet.bind(this))
+        .onSet(this.handleValveSwitchSet.bind(this));
+    } else {
+      // Remove a previously created companion switch if the option was disabled
+      const staleSwitch = this.accessory.getServiceById(this.ondusPlatform.Service.Switch, switchSubType);
+      if (staleSwitch) {
+        this.accessory.removeService(staleSwitch);
+      }
+    }
   }
 
 
@@ -218,6 +247,42 @@ export class OndusSenseGuard extends OndusAppliance {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET InUse`);
     return this.currentFlowRate > 0 ? this.ondusPlatform.Characteristic.InUse.IN_USE :
       this.ondusPlatform.Characteristic.InUse.NOT_IN_USE;
+  }
+
+  /**
+   * Handle requests to get the current value of the companion Switch "On"
+   * characteristic. On reflects the valve being open.
+   */
+  async handleValveSwitchGet(): Promise<CharacteristicValue> {
+    this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET Valve Switch On`);
+    try {
+      await this.getValveState();
+    } catch {
+      throw new this.ondusPlatform.api.hap.HapStatusError(this.ondusPlatform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+    }
+    return this.currentValveState;
+  }
+
+  /**
+   * Handle requests to set the companion Switch "On" characteristic. The switch
+   * only exists when valve_control is enabled, so it always drives the valve.
+   */
+  async handleValveSwitchSet(value: CharacteristicValue): Promise<void> {
+    this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered SET Valve Switch On: ${value}`);
+    try {
+      await this.setValveState(value === true);
+    } catch {
+      throw new this.ondusPlatform.api.hap.HapStatusError(this.ondusPlatform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+    }
+  }
+
+  /**
+   * Keep the optional companion Switch in sync with the actual valve state
+   */
+  setValveSwitchOn(on: boolean) {
+    if (this.switchService) {
+      this.switchService.updateCharacteristic(this.ondusPlatform.Characteristic.On, on);
+    }
   }
 
   // ---- ONDUS API FUNCTIONS BELOW ----
@@ -388,6 +453,9 @@ export class OndusSenseGuard extends OndusAppliance {
             this.setValveServiceActive(false);
           }
 
+          // Keep the optional companion switch in sync
+          this.setValveSwitchOn(this.currentValveState);
+
           // Resolve promise to handleActiveGet()
           this.setValveServiceStatusActive(true);
           resolve(this.currentValveState);
@@ -438,18 +506,26 @@ export class OndusSenseGuard extends OndusAppliance {
     // This will prevent handleActiveSet() function returning incorrect value for currentValveState
     return new Promise<boolean>((resolve, reject) => {
       this.setApplianceCommand(data)
-        .then(res => {
-          //this.ondusPlatform.log.debug('res: ', res.body);
-          this.currentValveState = res.body.command.valve_open;
-          if (this.currentValveState) {
+        .then(() => {
+          // The Ondus API does not reliably echo the updated valve_open state in
+          // the command response (it can be missing or still report the previous
+          // state), so trust the state we just commanded. The request was accepted
+          // (no error thrown), so the valve is moving to valveState. Relying on the
+          // echo previously left InUse=0 while Active=1, which HomeKit renders as a
+          // permanent "Waiting..." state even though the valve is open.
+          this.currentValveState = valveState;
+          if (valveState === OndusSenseGuard.VALVE_OPEN) {
             this.ondusPlatform.log.warn(`[${this.logPrefix}] Main water inlet valve has been opened`);
-            this.currentValveState = OndusSenseGuard.VALVE_OPEN;
+            this.setValveServiceActive(true);
             this.setValveServiceInUse(true);
           } else {
             this.ondusPlatform.log.warn(`[${this.logPrefix}] Main water inlet valve has been closed`);
-            this.currentValveState = OndusSenseGuard.VALVE_CLOSED;
             this.setValveServiceInUse(false);
+            this.setValveServiceActive(false);
           }
+
+          // Keep the optional companion switch in sync
+          this.setValveSwitchOn(this.currentValveState);
 
           // Resolve promise to handleActiveSet()
           this.setValveServiceStatusActive(true);
