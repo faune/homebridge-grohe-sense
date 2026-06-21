@@ -34,6 +34,11 @@ export class OndusSenseGuard extends OndusAppliance {
   private currentValveState: boolean = OndusSenseGuard.VALVE_OPEN || OndusSenseGuard.VALVE_CLOSED;
   private currentFlowRate: number;
   private currentPressure: number;
+
+  // De-duplicates concurrent valve state refreshes triggered by HomeKit polling
+  private valveStateInFlight?: Promise<boolean>;
+  // After a command, ignore (potentially stale) API reads until the cloud catches up
+  private suppressValveRefreshUntil = 0;
  
   /**
    * Ondus Sense Guard constructor for mains powered water control valve
@@ -124,8 +129,17 @@ export class OndusSenseGuard extends OndusAppliance {
       this.getHistoricalMeasurements();
     } else {
       void this.getLastMeasurements().catch(() => { /* errors logged in getLastMeasurements */ });
-      void this.getValveState().catch(() => { /* errors logged in getValveState */ });
     }
+
+    // Always fetch the current valve state at startup so HomeKit reflects it
+    // (this previously never ran when Eve history support was enabled)
+    void this.getValveState().catch(() => { /* errors logged in getValveState */ });
+
+    // Periodically refresh the valve state so changes made outside HomeKit
+    // (e.g. the Grohe app) eventually propagate to the Home app
+    setInterval(() => {
+      void this.getValveState().catch(() => { /* errors logged in getValveState */ });
+    }, this.getRefreshIntervalMs());
 
     // Poll notifications so LeakDetected changes are pushed to HomeKit automations
     this.startLeakNotificationPolling();
@@ -170,6 +184,19 @@ export class OndusSenseGuard extends OndusAppliance {
     }
   }
 
+  /**
+   * Push a single valve state to every HomeKit representation at once: the
+   * Valve service (Active + InUse) and the optional companion Switch. InUse is
+   * kept identical to Active because a main shut-off valve has no meaningful
+   * "open but not flowing" state - decoupling them is what makes the Home app
+   * render a permanent "Waiting..." animation.
+   */
+  private applyValveState(open: boolean) {
+    this.setValveServiceActive(open);
+    this.setValveServiceInUse(open);
+    this.setValveSwitchOn(open);
+  }
+
   setValveServiceStatusFault(action: boolean) {
     if (action) {
       this.valveService.updateCharacteristic(this.ondusPlatform.Characteristic.StatusFault, 
@@ -199,16 +226,16 @@ export class OndusSenseGuard extends OndusAppliance {
   }
 
   /**
-   * Handle requests to get the current value of the "Active" characteristic
+   * Handle requests to get the current value of the "Active" characteristic.
+   *
+   * Returns the last known state immediately to avoid blocking HomeKit on a
+   * network round-trip (which caused UI lag and, right after a command, stale
+   * reads that reverted the valve). A background refresh pushes any updated
+   * state via updateCharacteristic when it arrives.
    */
-  async handleValveServiceActiveGet(): Promise<CharacteristicValue> {
-    this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET Active`);
-    //this.ondusPlatform.log.debug('GET reporting: ', this.currentValveState);
-    try {
-      await this.getValveState();
-    } catch {
-      throw new this.ondusPlatform.api.hap.HapStatusError(this.ondusPlatform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
-    }
+  handleValveServiceActiveGet(): CharacteristicValue {
+    this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET Active (cached=${this.currentValveState})`);
+    void this.getValveState().catch(() => { /* errors logged in getValveState */ });
     return this.currentValveState;
   }
 
@@ -253,13 +280,9 @@ export class OndusSenseGuard extends OndusAppliance {
    * Handle requests to get the current value of the companion Switch "On"
    * characteristic. On reflects the valve being open.
    */
-  async handleValveSwitchGet(): Promise<CharacteristicValue> {
-    this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET Valve Switch On`);
-    try {
-      await this.getValveState();
-    } catch {
-      throw new this.ondusPlatform.api.hap.HapStatusError(this.ondusPlatform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
-    }
+  handleValveSwitchGet(): CharacteristicValue {
+    this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET Valve Switch On (cached=${this.currentValveState})`);
+    void this.getValveState().catch(() => { /* errors logged in getValveState */ });
     return this.currentValveState;
   }
 
@@ -433,34 +456,38 @@ export class OndusSenseGuard extends OndusAppliance {
    * Retrieve Sense Guard valve state. Returns a promise that will be resolved
    * once valve state has been queried from the Ondus API.
    */
-  getValveState() {
-    this.ondusPlatform.log.debug(`[${this.logPrefix}] Retrieving main water inlet valve state`);
+  getValveState(): Promise<boolean> {
+    // Coalesce concurrent refreshes (HomeKit may poll Active and the Switch at
+    // the same time) into a single API request.
+    if (this.valveStateInFlight) {
+      return this.valveStateInFlight;
+    }
 
-    // Return new promise to caller before calling into async function, and resolve 
-    // this promise when getApplianceCommand promise has been resolved and result processed.
-    // This will prevent handleActiveGet() function returning incorrect value for currentValveState
-    return new Promise<boolean>((resolve, reject) => {
+    this.ondusPlatform.log.debug(`[${this.logPrefix}] Retrieving main water inlet valve state`);
+    this.valveStateInFlight = new Promise<boolean>((resolve, reject) => {
       this.getApplianceCommand()
         .then(res => {
-          this.currentValveState = res.body.command.valve_open;
-          if (this.currentValveState) {
-            this.ondusPlatform.log.debug(`[${this.logPrefix}] Main water inlet valve is open`);
-            this.setValveServiceActive(true);
-            this.setValveServiceInUse(true);
-          } else {
-            this.ondusPlatform.log.debug(`[${this.logPrefix}] Main water inlet valve is closed`);
-            this.setValveServiceInUse(false);
-            this.setValveServiceActive(false);
+          this.valveStateInFlight = undefined;
+
+          // Ignore reads that may not yet reflect a command we just sent, since
+          // the Ondus cloud can briefly keep reporting the previous valve state.
+          if (Date.now() < this.suppressValveRefreshUntil) {
+            this.ondusPlatform.log.debug(`[${this.logPrefix}] Ignoring valve state read during command settle window`);
+            this.setValveServiceStatusActive(true);
+            resolve(this.currentValveState);
+            return;
           }
 
-          // Keep the optional companion switch in sync
-          this.setValveSwitchOn(this.currentValveState);
+          this.currentValveState = res.body.command.valve_open;
+          this.ondusPlatform.log.debug(`[${this.logPrefix}] Main water inlet valve is ${this.currentValveState ? 'open' : 'closed'}`);
+          this.applyValveState(this.currentValveState);
 
           // Resolve promise to handleActiveGet()
           this.setValveServiceStatusActive(true);
           resolve(this.currentValveState);
         })
         .catch(err => {
+          this.valveStateInFlight = undefined;
           this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to retrieve main water inlet valve state: ${err}`);
 
           // Resolve promise to handleActiveGet() and return last known valve state
@@ -468,6 +495,7 @@ export class OndusSenseGuard extends OndusAppliance {
           reject(this.currentValveState);
         });
     });
+    return this.valveStateInFlight;
   }
 
   /**
@@ -476,68 +504,41 @@ export class OndusSenseGuard extends OndusAppliance {
    *  
    * @param valveState true if valve is to be opened, false if valve is to be closed
    */
-  setValveState(valveState: boolean) {
+  setValveState(valveState: boolean): Promise<boolean> {
+    const previousState = this.currentValveState;
+    this.ondusPlatform.log.warn(`[${this.logPrefix}] ${valveState ? 'Opening' : 'Closing'} main water inlet valve`);
 
-    // Log input
-    if (valveState === OndusSenseGuard.VALVE_OPEN) {
-      this.ondusPlatform.log.warn(`[${this.logPrefix}] Opening main water inlet valve`);
-      this.setValveServiceActive(true);
-      setTimeout(() => {
-        // Need some delay for the Home app to correctly render the transition effect
-        // between closed -> waiting -> running 
-        this.setValveServiceInUse(true);
-      }, 50);
-      
-    } else {
-      this.ondusPlatform.log.warn(`[${this.logPrefix}] Closing main water inlet valve`);
-      this.setValveServiceInUse(false);
-      setTimeout(() => {
-        // Need some delay for the Home app to correctly render the transition effect
-        // between running -> stopping -> closed 
-        this.setValveServiceActive(false);
-      }, 50);
-    }
+    // Optimistically reflect the requested state across the Valve and Switch
+    // immediately so both tiles update in sync without lag or a "Waiting..."
+    // animation. Suppress background reads briefly so a not-yet-propagated cloud
+    // state cannot revert this before the command takes effect.
+    this.currentValveState = valveState;
+    this.suppressValveRefreshUntil = Date.now() + 15000;
+    this.applyValveState(valveState);
 
     // Construct payload for controlling valve state
     const data = {'type': OndusSenseGuard.ONDUS_TYPE, 'command' : { 'valve_open': valveState } };
 
-    // Return new promise to caller before calling into async function, and resolve 
-    // this promise when setApplianceCommand promise has been resolved and result processed.
-    // This will prevent handleActiveSet() function returning incorrect value for currentValveState
     return new Promise<boolean>((resolve, reject) => {
       this.setApplianceCommand(data)
         .then(() => {
           // The Ondus API does not reliably echo the updated valve_open state in
-          // the command response (it can be missing or still report the previous
-          // state), so trust the state we just commanded. The request was accepted
-          // (no error thrown), so the valve is moving to valveState. Relying on the
-          // echo previously left InUse=0 while Active=1, which HomeKit renders as a
-          // permanent "Waiting..." state even though the valve is open.
+          // the command response, so trust the state we just commanded.
+          this.ondusPlatform.log.warn(`[${this.logPrefix}] Main water inlet valve has been ${valveState ? 'opened' : 'closed'}`);
           this.currentValveState = valveState;
-          if (valveState === OndusSenseGuard.VALVE_OPEN) {
-            this.ondusPlatform.log.warn(`[${this.logPrefix}] Main water inlet valve has been opened`);
-            this.setValveServiceActive(true);
-            this.setValveServiceInUse(true);
-          } else {
-            this.ondusPlatform.log.warn(`[${this.logPrefix}] Main water inlet valve has been closed`);
-            this.setValveServiceInUse(false);
-            this.setValveServiceActive(false);
-          }
-
-          // Keep the optional companion switch in sync
-          this.setValveSwitchOn(this.currentValveState);
-
-          // Resolve promise to handleActiveSet()
+          this.applyValveState(valveState);
           this.setValveServiceStatusActive(true);
-          resolve(this.currentValveState);
+          resolve(valveState);
         })
         .catch(err => {
-          //this.ondusPlatform.log.debug('err:', err);
-          this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to retrieve valve state: ${err}`);
+          this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to set main water inlet valve state: ${err}`);
 
-          // Reject promise to handleActiveSet() and return last known valve state
+          // Command failed - revert the optimistic update on every representation
+          this.suppressValveRefreshUntil = 0;
+          this.currentValveState = previousState;
+          this.applyValveState(previousState);
           this.setValveServiceStatusActive(false);
-          reject(this.currentValveState);
+          reject(previousState);
         });
     });
   }

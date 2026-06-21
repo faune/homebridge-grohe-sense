@@ -12,6 +12,7 @@
 # Homebridge Grohe Sense plugin
 
 [![verified-by-homebridge](https://badgen.net/badge/homebridge/verified/purple)](https://github.com/homebridge/homebridge/wiki/Verified-Plugins)
+[![homebridge-v2-ready](https://badgen.net/badge/homebridge/v2%20ready/purple)](https://github.com/homebridge/homebridge/wiki/Updating-To-Homebridge-v2.0)
 [![Version](https://img.shields.io/npm/v/homebridge-grohe-sense.svg)](https://www.npmjs.com/package/homebridge-grohe-sense)
 [![Language](https://badgen.net/badge/language/typescript/orange)](https://badgen.net/badge/language/typescript/orange)
 [![Downloads](https://img.shields.io/npm/dt/homebridge-grohe-sense.svg)](https://www.npmjs.com/package/homebridge-grohe-sense)
