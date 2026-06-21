@@ -240,24 +240,28 @@ export class OndusSenseGuard extends OndusAppliance {
   }
 
   /**
-   * Handle requests to set the "Active" characteristic
+   * Handle requests to set the "Active" characteristic.
+   *
+   * Returns immediately so the Home app does not display a "Waiting..." spinner
+   * for the whole (potentially many-second) Ondus valve actuation + cloud round
+   * trip. The optimistic UI update happens synchronously inside setValveState
+   * and the command is fired in the background, reverting on failure.
    */
-  async handleValveServiceActiveSet(value: CharacteristicValue): Promise<void> {
+  handleValveServiceActiveSet(value: CharacteristicValue): void {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered SET Active: ${value}`);
 
-    try {
-      if (!this.ondusPlatform.config['valve_control']) {
-        // eslint-disable-next-line max-len
-        this.ondusPlatform.log.warn(`[${this.logPrefix}] If you really, really, REALLY want to control your main water inlet valve through HomeKit, please enable this feature in the plugin settings`);
-        await this.getValveState();
-      } else {
-        // Set valve state to value
-        await this.setValveState(value === 1);
-      }
-    } catch {
-      // An error occured, so indicate this to HomeKit
-      throw new this.ondusPlatform.api.hap.HapStatusError(this.ondusPlatform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+    if (!this.ondusPlatform.config['valve_control']) {
+      // eslint-disable-next-line max-len
+      this.ondusPlatform.log.warn(`[${this.logPrefix}] If you really, really, REALLY want to control your main water inlet valve through HomeKit, please enable this feature in the plugin settings`);
+      // Snap the tile back to the actual state immediately instead of leaving it
+      // stuck on "Waiting..." while a network read completes.
+      this.applyValveState(this.currentValveState);
+      return;
     }
+
+    // Fire-and-forget: setValveState updates the UI optimistically and reverts
+    // every representation itself if the command ultimately fails.
+    void this.setValveState(value === 1).catch(() => { /* reverted inside setValveState */ });
   }
 
   /**
@@ -289,14 +293,13 @@ export class OndusSenseGuard extends OndusAppliance {
   /**
    * Handle requests to set the companion Switch "On" characteristic. The switch
    * only exists when valve_control is enabled, so it always drives the valve.
+   *
+   * Returns immediately (fire-and-forget) for the same reason as the valve's
+   * Active setter - awaiting the slow Ondus command makes the Home app spin.
    */
-  async handleValveSwitchSet(value: CharacteristicValue): Promise<void> {
+  handleValveSwitchSet(value: CharacteristicValue): void {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered SET Valve Switch On: ${value}`);
-    try {
-      await this.setValveState(value === true);
-    } catch {
-      throw new this.ondusPlatform.api.hap.HapStatusError(this.ondusPlatform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
-    }
+    void this.setValveState(value === true).catch(() => { /* reverted inside setValveState */ });
   }
 
   /**

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-06-21
+
+### Fixed
+
+- Fixed the Sense Guard valve (and companion switch) staying stuck on the Home
+  app "Waiting..." spinner after toggling. The `onSet` handlers no longer await
+  the slow Ondus valve actuation / cloud round-trip; the UI is updated
+  optimistically and the command runs in the background, reverting only if it
+  fails. Tapping the valve while `valve_control` is disabled now snaps the tile
+  back to the real state immediately instead of spinning.
+
 ## [2.0.0] - 2026-06-21
 
 This is a major release that makes the plugin fully compatible with Homebridge v2
