@@ -4,7 +4,7 @@
 </p>
 <p align="center">
 <img src="https://cdn.cloud.grohe.com/Web/4_3/ZZH_T22500C05_000_01_4_3/4_3/710/ZZH_T22500C05_000_01_4_3_4_3.jpg" width="150">
-<img src="https://raw.githubusercontent.com/faune/homebridge-grohe-sense/master/icons/homebridge-grohe-ondus.png" width="100" alt="Homebridge Grohe Ondus plugin icon">
+<img src="https://raw.githubusercontent.com/faune/homebridge-grohe-sense/master/icons/homebridge-grohe-sense.png" width="100" alt="Homebridge Grohe Ondus plugin icon">
 <img src="https://cdn.cloud.grohe.com/Web/4_3/ZZH_T22505D55_000_01_4_3/4_3/710/ZZH_T22505D55_000_01_4_3_4_3.jpg" width="150">
 </p>
 
