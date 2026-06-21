@@ -6,6 +6,9 @@ name: Publish to npm
 on:
   release:
     types: [published]
+  # Allows re-running the publish manually from the Actions tab (e.g. if a
+  # release-triggered run failed). Publishes whatever version is in package.json.
+  workflow_dispatch:
 
 permissions:
   contents: read
