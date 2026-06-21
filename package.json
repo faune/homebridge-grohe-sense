@@ -35,7 +35,7 @@
   ],
   "dependencies": {
     "cheerio": "^1.0.0",
-    "fakegato-history": "0.6.2",
+    "fakegato-history": "0.6.7",
     "moment": "^2.29.3",
     "superagent": "^5.3.1",
     "superagent-throttle": "^1.0.1"
