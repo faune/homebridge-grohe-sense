@@ -1,10 +1,10 @@
-import { PlatformAccessory, Service } from 'homebridge';
+import { PlatformAccessory, Service, CharacteristicValue } from 'homebridge';
 import fakegato from 'fakegato-history';
 
-import { PLUGIN_VERSION } from './settings';
-import { OndusPlatform } from './ondusPlatform';
-import { OndusThresholds } from './ondusThresholds';
-import { OndusNotification } from './ondusNotification';
+import { PLUGIN_VERSION } from './settings.js';
+import { OndusPlatform } from './ondusPlatform.js';
+import { OndusThresholds } from './ondusThresholds.js';
+import { OndusNotification } from './ondusNotification.js';
 
 /**
  * Platform Accessory
@@ -91,7 +91,7 @@ export abstract class OndusAppliance {
   
     // create handlers for required characteristics of Leak service
     this.leakService.getCharacteristic(this.ondusPlatform.Characteristic.LeakDetected)
-      .on('get', this.handleLeakDetectedGet.bind(this));
+      .onGet(this.handleLeakDetectedGet.bind(this));
 
       
     /**
@@ -112,7 +112,7 @@ export abstract class OndusAppliance {
       
     // create handlers for required characteristics of Temperature service
     this.temperatureService.getCharacteristic(this.ondusPlatform.Characteristic.CurrentTemperature)
-      .on('get', this.handleCurrentTemperatureGet.bind(this));
+      .onGet(this.handleCurrentTemperatureGet.bind(this));
 
 
     /**
@@ -224,70 +224,69 @@ export abstract class OndusAppliance {
    * new notifications if a configured threshold has been exceeded within the last hours, or if 
    * a leak is detected.
    */
-  handleLeakDetectedGet(callback) {
+  async handleLeakDetectedGet(): Promise<CharacteristicValue> {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET LeakDetected:`);
 
     // Fetch buffered notifications from the Ondus API
-    this.getApplianceNotifications()
-      .then( res => {
+    try {
+      const res = await this.getApplianceNotifications();
 
-        // Dump server response for debugging purpose if SHTF mode is enabled
-        if (this.ondusPlatform.config['shtf_mode']) {
-          const debug = JSON.stringify(res.body);
-          this.ondusPlatform.log.debug(`[${this.logPrefix}] handleLeakDetectedGet().getApplianceNotifications() API RSP:\n "${debug}"`);
-        }
+      // Dump server response for debugging purpose if SHTF mode is enabled
+      if (this.ondusPlatform.config['shtf_mode']) {
+        const debug = JSON.stringify(res.body);
+        this.ondusPlatform.log.debug(`[${this.logPrefix}] handleLeakDetectedGet().getApplianceNotifications() API RSP:\n "${debug}"`);
+      }
 
-        // Reset all status fault characteristics before parsing new notifications
-        this.leakDetected = false;
-        this.resetAllStatusFaults();
+      // Reset all status fault characteristics before parsing new notifications
+      this.leakDetected = false;
+      this.resetAllStatusFaults();
 
-        // Log number of pending notifications
-        let numOfPendingNotifications = 0;
-        if (res.body.length > 0) {
-          // For reasons unknown the Ondus API have started returning messages that
-          // are marked as read. This did not happen before, so until I figure out
-          // what has changed or Ondus API revert to the old behavior of only returning
-          // messages that havent been marked as read in the Ondus app we need to filter
-          // on the is_read property for each message.
-          res.body.forEach(element => {
-            if (element.is_read === false) {
-              numOfPendingNotifications+=1;
-            }
-          });
-        }
+      // Log number of pending notifications
+      let numOfPendingNotifications = 0;
+      if (res.body.length > 0) {
+        // For reasons unknown the Ondus API have started returning messages that
+        // are marked as read. This did not happen before, so until I figure out
+        // what has changed or Ondus API revert to the old behavior of only returning
+        // messages that havent been marked as read in the Ondus app we need to filter
+        // on the is_read property for each message.
+        res.body.forEach(element => {
+          if (element.is_read === false) {
+            numOfPendingNotifications+=1;
+          }
+        });
+      }
 
-        if (numOfPendingNotifications === 0) {
-          this.ondusPlatform.log.info(`[${this.logPrefix}] No pending notifications`);
-        } else {
-          this.ondusPlatform.log.info(`[${this.logPrefix}] Processing ${numOfPendingNotifications} notifications ...`);
+      if (numOfPendingNotifications === 0) {
+        this.ondusPlatform.log.info(`[${this.logPrefix}] No pending notifications`);
+      } else {
+        this.ondusPlatform.log.info(`[${this.logPrefix}] Processing ${numOfPendingNotifications} notifications ...`);
 
-          // Iterate over all unread notifications for this accessory
-          res.body.forEach(element => {
-            if (element.is_read === true) {
-              return;
-            }
-            // Log unread notification message
-            const notification = new OndusNotification(this, element.category, element.type, element.timestamp).getNotification();
-            this.ondusPlatform.log.warn(`[${this.logPrefix}] ${notification}`);
-          });
-        }
+        // Iterate over all unread notifications for this accessory
+        res.body.forEach(element => {
+          if (element.is_read === true) {
+            return;
+          }
+          // Log unread notification message
+          const notification = new OndusNotification(this, element.category, element.type, element.timestamp).getNotification();
+          this.ondusPlatform.log.warn(`[${this.logPrefix}] ${notification}`);
+        });
+      }
 
-        // Update the leakService LeakDetected characteristics
-        this.setLeakServiceLeakDetected(this.leakDetected);
-        
-        // Enable Active characteristics for leak service
-        this.setLeakServiceStatusActive(true);
-        callback(null, this.leakDetected);
+      // Update the leakService LeakDetected characteristics
+      this.setLeakServiceLeakDetected(this.leakDetected);
 
-      })
-      .catch( err => {
-        this.ondusPlatform.log.debug(err);
-        this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to process notifications: ${err}`);
-        
-        // Disable Active characteristics for leakage service
-        this.setLeakServiceStatusActive(false);  
-        callback(err, this.leakDetected);
-      });
+      // Enable Active characteristics for leak service
+      this.setLeakServiceStatusActive(true);
+      return this.leakDetected;
+
+    } catch (err) {
+      this.ondusPlatform.log.debug(`${err}`);
+      this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to process notifications: ${err}`);
+
+      // Disable Active characteristics for leakage service
+      this.setLeakServiceStatusActive(false);
+      throw new this.ondusPlatform.api.hap.HapStatusError(this.ondusPlatform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+    }
   }
 
   /**
@@ -295,9 +294,9 @@ export abstract class OndusAppliance {
    * 
    * This function should be overloaded depending on the strategy for fetching new temperature data
    */
-  handleCurrentTemperatureGet(callback) {
+  handleCurrentTemperatureGet(): CharacteristicValue | Promise<CharacteristicValue> {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET CurrentTemperature`);
-    callback(null, this.currentTemperature);
+    return this.currentTemperature;
   }
 
  

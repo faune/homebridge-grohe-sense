@@ -1,19 +1,19 @@
 import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge';
 
-import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
-import { OndusSession } from './ondusSession'; // Ondus HTTP library
-import { OndusSense } from './ondusSense';
-import { OndusSensePlus } from './ondusSensePlus';
-import { OndusSenseGuard } from './ondusSenseGuard';
-//import { OndusSenseBlue } from './ondusSenseBlue';
-//import { OndusSenseRed } from './ondusSenseRed';
+import { PLATFORM_NAME, PLUGIN_NAME } from './settings.js';
+import { OndusSession } from './ondusSession.js'; // Ondus HTTP library
+import { OndusSense } from './ondusSense.js';
+import { OndusSensePlus } from './ondusSensePlus.js';
+import { OndusSenseGuard } from './ondusSenseGuard.js';
+//import { OndusSenseBlue } from './ondusSenseBlue.js';
+//import { OndusSenseRed } from './ondusSenseRed.js';
 
 /**
  * Ondus Platform constructor
  */
 export class OndusPlatform implements DynamicPlatformPlugin {
-  public readonly Service: typeof Service = this.api.hap.Service;
-  public readonly Characteristic: typeof Characteristic = this.api.hap.Characteristic;
+  public readonly Service: typeof Service;
+  public readonly Characteristic: typeof Characteristic;
 
   // this is used to track restored cached accessories
   public readonly accessories: PlatformAccessory[] = [];
@@ -29,6 +29,9 @@ export class OndusPlatform implements DynamicPlatformPlugin {
     public readonly config: PlatformConfig,
     public readonly api: API,
   ) {
+
+    this.Service = this.api.hap.Service;
+    this.Characteristic = this.api.hap.Characteristic;
 
     // Dump config in SHTF mode
     if (this.config['shtf_mode']) {
@@ -112,48 +115,40 @@ export class OndusPlatform implements DynamicPlatformPlugin {
         });
     }
 
-    // Retrieve all locations
-    await this.ondusSession.getLocations()
-      .then(locations => {
-        // Iterate over all registered locations
-        locations.body.forEach(async location => {
-          
-          // Retrieve registered rooms for a location
-          this.log.debug(`Processing locationID=${location.id} (${location.name})`);
-          await this.ondusSession.getRooms(location.id)
-            .then(rooms => {
-              //this.log.debug('Iterating over rooms: ', rooms.body);
-              rooms.body.forEach(async room => {
+    let locations;
+    try {
+      locations = await this.ondusSession.getLocations();
+    } catch (err) {
+      this.log.error(`Error during locations refresh: ${err}`);
+      return;
+    }
 
-                // Retrieve registered appliances for a room
-                this.log.debug(`Processing roomID=${room.id} (${room.name})`);
-                await this.ondusSession.getAppliances(location.id, room.id)
-                  .then(appliances => {
-                    //this.log.debug('Iterating over appliances: ', appliances.body);
-                    appliances.body.forEach(appliance => {
-                      this.log.debug(`Found applianceID=${appliance.appliance_id} name=${appliance.name}`);
-                      this.registerOndusAppliance(location.id, room.id, appliance);
-                    });
-                  })
-                  // Error handler for appliances
-                  .catch(err => {
-                    const errMsg = `Error during appliances refresh: ${err}`;
-                    this.log.error(errMsg);
-                  });
-              });
-            })
-            // Error handler for rooms
-            .catch(err => {
-              const errMsg = `Error during rooms refresh: ${err}`;
-              this.log.error(errMsg);
-            });
-        });
-      })
-      // Error handler for locations
-      .catch(err => {
-        const errMsg = `Error during locations refresh: ${err}`;
-        this.log.error(errMsg);
-      });
+    for (const location of locations.body) {
+      this.log.debug(`Processing locationID=${location.id} (${location.name})`);
+      let rooms;
+      try {
+        rooms = await this.ondusSession.getRooms(location.id);
+      } catch (err) {
+        this.log.error(`Error during rooms refresh: ${err}`);
+        continue;
+      }
+
+      for (const room of rooms.body) {
+        this.log.debug(`Processing roomID=${room.id} (${room.name})`);
+        let appliances;
+        try {
+          appliances = await this.ondusSession.getAppliances(location.id, room.id);
+        } catch (err) {
+          this.log.error(`Error during appliances refresh: ${err}`);
+          continue;
+        }
+
+        for (const appliance of appliances.body) {
+          this.log.debug(`Found applianceID=${appliance.appliance_id} name=${appliance.name}`);
+          this.registerOndusAppliance(location.id, room.id, appliance);
+        }
+      }
+    }
   }
 
   

@@ -1,7 +1,7 @@
 import { PlatformAccessory, Service } from 'homebridge';
 
-import { OndusAppliance } from './ondusAppliance';
-import { OndusPlatform } from './ondusPlatform';
+import { OndusAppliance } from './ondusAppliance.js';
+import { OndusPlatform } from './ondusPlatform.js';
 
 
 /**

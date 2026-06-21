@@ -8,9 +8,8 @@ export const PLATFORM_NAME = 'Ondus';
  */
 export const PLUGIN_NAME = 'homebridge-grohe-sense';
 
-/**
- * Version number from package.json. 
- * 
- * WARNING: Must be updated manually before release!
- */
-export const PLUGIN_VERSION = '1.5.2';
+// Resolved from package.json next to dist/ after build (single source of truth for releases).
+import { createRequire } from 'module';
+const requireFromHere = createRequire(import.meta.url);
+const pkg = requireFromHere('../package.json') as { version: string };
+export const PLUGIN_VERSION: string = pkg.version;

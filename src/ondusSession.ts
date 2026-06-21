@@ -27,6 +27,7 @@ export class OndusSession {
   sessionCookie: string;
   loggedIn: boolean;
   throttle: Throttle;
+  private refreshTimer: ReturnType<typeof setTimeout> | undefined;
 
   // Ondus URLs
   BASE_URL = 'https://idp2-apigw.cloud.grohe.com/v3/iot'
@@ -85,6 +86,8 @@ export class OndusSession {
    */
   public async login() {
 
+    this.clearAccessTokenRefreshSchedule();
+
     // Reset loggedIn status
     this.loggedIn = false; 
 
@@ -107,21 +110,43 @@ export class OndusSession {
         });
     }
 
-    // Make sure we refresh the access token once it expires
-    this.log.info(`Scheduling access token refresh in ${this.accessTokenExpireIn} seconds`);
-    setInterval( async () => { 
-      this.log.info('Access token has expired - refreshing ...');
-      await this.refreshAccessToken()
-        .then( () => {
-          this.loggedIn = true;
-        })
-        .catch( err => {
-          this.log.error(`Unable to refresh access token after ${this.accessTokenExpireIn} seconds: ${err}`);
-          this.loggedIn = false;
-        });
-    }, this.accessTokenExpireIn * 1000);
+    if (this.loggedIn) {
+      this.scheduleAccessTokenRefresh();
+    }
 
     return this.loggedIn;
+  }
+
+  private clearAccessTokenRefreshSchedule(): void {
+    if (this.refreshTimer !== undefined) {
+      clearTimeout(this.refreshTimer);
+      this.refreshTimer = undefined;
+    }
+  }
+
+  /**
+   * Refresh shortly before the server-indicated expiry, then reschedule using the new expires_in.
+   */
+  private scheduleAccessTokenRefresh(): void {
+    this.clearAccessTokenRefreshSchedule();
+    const marginSec = 60;
+    const delaySec = Math.max(this.accessTokenExpireIn - marginSec, 60);
+    this.log.info(`Scheduling access token refresh in ${delaySec} seconds`);
+    this.refreshTimer = setTimeout(() => {
+      void this.runScheduledAccessTokenRefresh();
+    }, delaySec * 1000);
+  }
+
+  private async runScheduledAccessTokenRefresh(): Promise<void> {
+    this.log.info('Access token has expired - refreshing ...');
+    try {
+      await this.refreshAccessToken();
+      this.loggedIn = true;
+      this.scheduleAccessTokenRefresh();
+    } catch (err) {
+      this.log.error(`Unable to refresh access token: ${err}`);
+      this.loggedIn = false;
+    }
   }
 
   /**
@@ -272,9 +297,11 @@ export class OndusSession {
    * 
    * @param url URL address to perform a GET against
    */
-  private async getURL(url: string) {
+  private getURL(url: string): Promise<superagent.Response> {
     if (!this.accessToken) {
-      this.log.error('getURL(): Cannot call getURL() before an access token has been acquired');
+      const errMsg = 'getURL(): Cannot call getURL() before an access token has been acquired';
+      this.log.error(errMsg);
+      return Promise.reject(new Error(errMsg));
     }
     this.log.debug('getURL(): GET: ', url);
     
@@ -303,15 +330,18 @@ export class OndusSession {
    * 
    * @param url URL address to perform a POST against
    */
-  private async postURL(url: string, data) {
+  private postURL(url: string, data): Promise<superagent.Response> {
     if (!this.accessToken) {
-      this.log.error('postURL(): Cannot call postURL() before an access token has been acquired');
+      const errMsg = 'postURL(): Cannot call postURL() before an access token has been acquired';
+      this.log.error(errMsg);
+      return Promise.reject(new Error(errMsg));
     }
     this.log.debug('postURL(): POST: ', url);
     
     return new Promise<superagent.Response>((resolve, reject) => {
       superagent
         .post(url)
+        .use(this.throttle.plugin())
         .set('Content-Type', 'application/json')
         .set('Authorization', `Bearer ${this.accessToken}`)
         .set('accept', 'json')

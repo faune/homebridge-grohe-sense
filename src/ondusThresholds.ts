@@ -81,7 +81,7 @@ export class OndusThresholds {
         }
         if (element.type === 'max') {
           this.highTempLimit = element.value;
-          this.highFlowLimitEn = element.enabled;
+          this.highTempLimitEn = element.enabled;
           this.log.info(`[${this.logPrefix}] [${element.enabled ? '*':' '}] Temperature high: ${this.highTempLimit}˚C`);
         }
       }

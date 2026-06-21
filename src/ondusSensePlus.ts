@@ -1,8 +1,8 @@
 import moment from 'moment';
-import { PlatformAccessory, Service } from 'homebridge';
+import { PlatformAccessory, Service, CharacteristicValue } from 'homebridge';
 
-import { OndusAppliance } from './ondusAppliance';
-import { OndusPlatform } from './ondusPlatform';
+import { OndusAppliance } from './ondusAppliance.js';
+import { OndusPlatform } from './ondusPlatform.js';
 
 
 /**
@@ -70,7 +70,7 @@ export class OndusSensePlus extends OndusAppliance {
 
     // create handlers for required characteristics for Humidity service
     this.humidityService.getCharacteristic(this.ondusPlatform.Characteristic.CurrentRelativeHumidity)
-      .on('get', this.handleCurrentRelativeHumidityGet.bind(this));
+      .onGet(this.handleCurrentRelativeHumidityGet.bind(this));
 
   }
 
@@ -85,12 +85,7 @@ export class OndusSensePlus extends OndusAppliance {
     
     // Start timer for fetching updated values from Ondus API once every refresh_interval from now on
     // The reason is that sensors only report new data once every day, so no point in querying Ondus API often
-    let refreshInterval = this.ondusPlatform.config['refresh_interval'] * 1000;
-    if (!refreshInterval) {
-      // eslint-disable-next-line max-len
-      this.ondusPlatform.log.warn(`[${this.logPrefix}] Refresh interval incorrectly configured in config.json - using default value of 3600 seconds`);
-      refreshInterval = 3600000;
-    }
+    const refreshInterval = this.getRefreshIntervalMs();
     setInterval( () => { 
       // Make sure accessory context device has the latest appliance info
       this.updateApplianceInfo(); 
@@ -98,6 +93,21 @@ export class OndusSensePlus extends OndusAppliance {
       this.getLastMeasurements();
       this.getStatus();
     }, refreshInterval);
+  }
+
+  private getRefreshIntervalMs(): number {
+    const raw = this.ondusPlatform.config['refresh_interval'];
+    let seconds =
+      typeof raw === 'number' && Number.isFinite(raw)
+        ? raw
+        : Number(raw);
+    if (!Number.isFinite(seconds) || seconds <= 0) {
+      // eslint-disable-next-line max-len
+      this.ondusPlatform.log.warn(`[${this.logPrefix}] Refresh interval incorrectly configured in config.json — using default 3600 seconds`);
+      seconds = 3600;
+    }
+    seconds = Math.min(86400, Math.max(60, Math.round(seconds)));
+    return seconds * 1000;
   }
 
   resetAllStatusFaults() {
@@ -136,9 +146,9 @@ export class OndusSensePlus extends OndusAppliance {
   /**
    * Handle requests to get the current value of the "Current Relative Humidity" characteristic
    */
-  handleCurrentRelativeHumidityGet(callback) {
+  handleCurrentRelativeHumidityGet(): CharacteristicValue {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET CurrentRelativeHumidity`);
-    callback(null, this.currentHumidity);
+    return this.currentHumidity;
   }
 
 

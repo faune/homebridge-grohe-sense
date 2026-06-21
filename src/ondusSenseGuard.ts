@@ -1,8 +1,8 @@
 import moment from 'moment';
-import { Service, PlatformAccessory } from 'homebridge';
+import { Service, PlatformAccessory, CharacteristicValue } from 'homebridge';
 
-import { OndusPlatform } from './ondusPlatform';
-import { OndusAppliance } from './ondusAppliance';
+import { OndusPlatform } from './ondusPlatform.js';
+import { OndusAppliance } from './ondusAppliance.js';
 
 
 /**
@@ -78,14 +78,17 @@ export class OndusSenseGuard extends OndusAppliance {
       
     // register handlers for required characteristics of Valve service
     this.valveService.getCharacteristic(this.ondusPlatform.Characteristic.Active)
-      .on('get', this.handleValveServiceActiveGet.bind(this))
-      .on('set', this.handleValveServiceActiveSet.bind(this));
+      .onGet(this.handleValveServiceActiveGet.bind(this))
+      .onSet(this.handleValveServiceActiveSet.bind(this));
   }
 
 
   start() {
     if (this.historyService) {
       this.getHistoricalMeasurements();
+    } else {
+      void this.getLastMeasurements().catch(() => { /* errors logged in getLastMeasurements */ });
+      void this.getValveState().catch(() => { /* errors logged in getValveState */ });
     }
   }
 
@@ -146,55 +149,48 @@ export class OndusSenseGuard extends OndusAppliance {
   /**
    * Handle requests to get the current value of the "Current Temperature" characteristic
    */
-  handleCurrentTemperatureGet(callback) {
+  async handleCurrentTemperatureGet(): Promise<CharacteristicValue> {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET CurrentTemperature`);
-    this.getLastMeasurements()
-      .then ( () => {
-        callback(null, this.currentTemperature);
-      })
-      .catch( err => {
-        callback(err, this.currentTemperature);
-      });
+    try {
+      await this.getLastMeasurements();
+    } catch (err) {
+      throw new this.ondusPlatform.api.hap.HapStatusError(this.ondusPlatform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+    }
+    return this.currentTemperature;
   }
 
   /**
    * Handle requests to get the current value of the "Active" characteristic
    */
-  handleValveServiceActiveGet(callback) {
+  async handleValveServiceActiveGet(): Promise<CharacteristicValue> {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET Active`);
     //this.ondusPlatform.log.debug('GET reporting: ', this.currentValveState);
-    this.getValveState()
-      .then( () => {
-        callback(null, this.currentValveState);
-      })
-      .catch( err => {
-        callback(err, this.currentValveState);
-      });
-    
+    try {
+      await this.getValveState();
+    } catch (err) {
+      throw new this.ondusPlatform.api.hap.HapStatusError(this.ondusPlatform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+    }
+    return this.currentValveState;
   }
 
   /**
    * Handle requests to set the "Active" characteristic
    */
-  handleValveServiceActiveSet(value, callback) {
+  async handleValveServiceActiveSet(value: CharacteristicValue): Promise<void> {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered SET Active: ${value}`);
-    
-    if (!this.ondusPlatform.config['valve_control']) {
-      // eslint-disable-next-line max-len
-      this.ondusPlatform.log.warn(`[${this.logPrefix}] If you really, really, REALLY want to control your main water inlet valve through HomeKit, please enable this feature in the plugin settings`);
-      callback(null);
-    } else {
-      // Set valve state to value
-      //this.ondusPlatform.log.debug('before state is: ', this.currentValveState);
-      this.setValveState(value === 1 ? true: false)
-        .then( () => {
-          //this.ondusPlatform.log.debug(`after state is ${this.currentValveState} ${res}`);
-          callback(null);
-        })
-        .catch( err => {
-          // An error occured, so indicate this to the callback handler
-          callback(err);
-        });
+
+    try {
+      if (!this.ondusPlatform.config['valve_control']) {
+        // eslint-disable-next-line max-len
+        this.ondusPlatform.log.warn(`[${this.logPrefix}] If you really, really, REALLY want to control your main water inlet valve through HomeKit, please enable this feature in the plugin settings`);
+        await this.getValveState();
+      } else {
+        // Set valve state to value
+        await this.setValveState(value === 1);
+      }
+    } catch (err) {
+      // An error occured, so indicate this to HomeKit
+      throw new this.ondusPlatform.api.hap.HapStatusError(this.ondusPlatform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
     }
   }
 
@@ -208,11 +204,10 @@ export class OndusSenseGuard extends OndusAppliance {
    * Current assumption is that the getCurrentTemperatureGet() method will most 
    * likely be triggered when handleInUseGet() is triggered.
    */
-  handleInUseGet(callback) {
+  handleInUseGet(): CharacteristicValue {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET InUse`);
-    callback(null, (this.currentFlowRate > 0 ? this.ondusPlatform.Characteristic.InUse.IN_USE : 
-      this.ondusPlatform.Characteristic.InUse.NOT_IN_USE));
-  
+    return this.currentFlowRate > 0 ? this.ondusPlatform.Characteristic.InUse.IN_USE :
+      this.ondusPlatform.Characteristic.InUse.NOT_IN_USE;
   }
 
   // ---- ONDUS API FUNCTIONS BELOW ----
@@ -292,9 +287,12 @@ export class OndusSenseGuard extends OndusAppliance {
       this.getApplianceMeasurements(fromDate)
         .then( measurement => {
           //this.ondusPlatform.log.debug('res: ', measurement);
-          const measurementArray = measurement.body.data.measurement;
+          const measurementArray = measurement.body.data?.measurement;
           if (!Array.isArray(measurementArray)) {
-            this.ondusPlatform.log.debug(`[${this.logPrefix}] Unknown response ${measurement.body}`);
+            this.ondusPlatform.log.debug(`[${this.logPrefix}] Unknown response ${JSON.stringify(measurement.body)}`);
+            this.setTemperatureServiceStatusActive(false);
+            reject(new Error('No measurement array in API response'));
+            return;
           }
           this.ondusPlatform.log.debug(`[${this.logPrefix}] Retrieved ${measurementArray.length} measurements - picking last one`);
           measurementArray.sort((a, b) => {
@@ -308,6 +306,12 @@ export class OndusSenseGuard extends OndusAppliance {
               return 0;
             }
           });
+
+          if (measurementArray.length === 0) {
+            this.setTemperatureServiceStatusActive(false);
+            reject(new Error('Empty measurement array'));
+            return;
+          }
 
           // Add last measurements to historyService
           if (this.historyService) {

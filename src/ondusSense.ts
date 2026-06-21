@@ -1,7 +1,7 @@
-import { PlatformAccessory, Service } from 'homebridge';
+import { PlatformAccessory, Service, CharacteristicValue } from 'homebridge';
 
-import { OndusSensePlus } from './ondusSensePlus';
-import { OndusPlatform } from './ondusPlatform';
+import { OndusSensePlus } from './ondusSensePlus.js';
+import { OndusPlatform } from './ondusPlatform.js';
 
 
 /**
@@ -58,8 +58,8 @@ export class OndusSense extends OndusSensePlus {
      */
       
     // create handlers for battery characteristics for Battery service
-    this.batteryService = this.accessory.getService(this.ondusPlatform.Service.BatteryService) || 
-      this.accessory.addService(this.ondusPlatform.Service.BatteryService);
+    this.batteryService = this.accessory.getService(this.ondusPlatform.Service.Battery) || 
+      this.accessory.addService(this.ondusPlatform.Service.Battery);
     
     // set the Battery service characteristics
     this.batteryService
@@ -70,9 +70,9 @@ export class OndusSense extends OndusSensePlus {
 
     // create handlers for required characteristics of Battery service
     this.batteryService.getCharacteristic(this.ondusPlatform.Characteristic.BatteryLevel)
-      .on('get', this.handleBatteryLevelGet.bind(this));
+      .onGet(this.handleBatteryLevelGet.bind(this));
     this.batteryService.getCharacteristic(this.ondusPlatform.Characteristic.StatusLowBattery)
-      .on('get', this.handleStatusLowBatteryGet.bind(this));
+      .onGet(this.handleStatusLowBatteryGet.bind(this));
   }
 
 
@@ -81,18 +81,18 @@ export class OndusSense extends OndusSensePlus {
   /**
    * Handle requests to get the current value of the "Battery Level" characteristic
    */
-  handleBatteryLevelGet(callback) {
+  handleBatteryLevelGet(): CharacteristicValue {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET BatteryLevel`);
-    callback(null, this.currentBatteryLevel);
+    return this.currentBatteryLevel;
   }
 
   /**
    * Handle requests to get the current value of the "Status Low Battery" characteristic
    */
-  handleStatusLowBatteryGet(callback) {
+  handleStatusLowBatteryGet(): CharacteristicValue {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET StatusLowBattery`);
-    callback(null, this.currentBatteryLevel > 10 ? this.ondusPlatform.Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL : 
-      this.ondusPlatform.Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW);
+    return this.currentBatteryLevel > 10 ? this.ondusPlatform.Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL :
+      this.ondusPlatform.Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW;
   }
 
 

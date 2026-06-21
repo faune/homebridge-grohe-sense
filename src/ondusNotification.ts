@@ -1,5 +1,5 @@
-import { OndusAppliance } from './ondusAppliance';
-import { OndusThresholds } from './ondusThresholds';
+import { OndusAppliance } from './ondusAppliance.js';
+import { OndusThresholds } from './ondusThresholds.js';
 
 
 export const NOTIFICATION_CATEGORY_FIRMWARE = 10;
