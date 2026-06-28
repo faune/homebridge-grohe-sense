@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-06-28
+
+### Added
+
+- Grohe Blue support (Blue Home, type 104, and Blue Professional, type 105). Each
+  Blue appliance is exposed with three momentary "dispense" buttons (Still,
+  Medium, Sparkling) plus a CO2 level (shown as a Battery) and a water filter
+  level (shown as a Filter Maintenance service). A button press pours the
+  configured amount of water and the appliance stops on its own.
+- New `blue_control` option (default on) to enable/disable dispensing from
+  HomeKit, and `blue_amount_ml` (default 250 ml) to set how much water each
+  button press dispenses.
+- Experimental, untested Grohe Red scaffold (a momentary hot-water button plus a
+  filter level). The Red appliance type id and command shape are unverified, so
+  it logs a clear warning and is isolated so it cannot affect other appliances.
+  Red owners are asked to share debug logs so it can be implemented properly.
+
+### Fixed
+
+- Grohe Blue Professional (type 105) was previously mis-identified as a Grohe Red
+  and reported as an unsupported appliance. Both 104 and 105 are now correctly
+  handled as Grohe Blue.
+
 ## [2.0.1] - 2026-06-21
 
 ### Fixed

@@ -17,11 +17,12 @@ export abstract class OndusAppliance {
   static ONDUS_NAME = 'Abstract';
   // Hacky workaround for lack of reflection support in typescript
   private ONDUS_MAP = {
-    101 : 'Sense',       // Mains powered leakage detector (obsoleted)
-    102 : 'Sense Plus',  // Battery operated leakage detector
-    103 : 'Sense Guard', // Main water inlet valve
-    104 : 'Sense Blue',  // Carbonated tap water
-    105 : 'Sense Red',   // Heated tap water
+    101 : 'Sense',              // Mains powered leakage detector (obsoleted)
+    102 : 'Sense Plus',         // Battery operated leakage detector
+    103 : 'Sense Guard',        // Main water inlet valve
+    104 : 'Blue Home',          // Carbonated/filtered tap water
+    105 : 'Blue Professional',  // Carbonated/filtered tap water
+    106 : 'Red (experimental)', // Heated tap water (type id unconfirmed)
   };
 
   //log: Logger;

@@ -5,8 +5,8 @@ import { OndusSession } from './ondusSession.js'; // Ondus HTTP library
 import { OndusSense } from './ondusSense.js';
 import { OndusSensePlus } from './ondusSensePlus.js';
 import { OndusSenseGuard } from './ondusSenseGuard.js';
-//import { OndusSenseBlue } from './ondusSenseBlue.js';
-//import { OndusSenseRed } from './ondusSenseRed.js';
+import { OndusSenseBlue } from './ondusSenseBlue.js';
+import { OndusSenseRed } from './ondusSenseRed.js';
 
 /**
  * Ondus Platform constructor
@@ -188,16 +188,15 @@ export class OndusPlatform implements DynamicPlatformPlugin {
         this.log.info(`Opening device handler "${OndusSenseGuard.ONDUS_NAME}" for "${applianceInfo.name}"`);
         new OndusSenseGuard(this, locationID, roomID, accessory).start();
         break;
-      /*  
-      case OndusSenseBlue.ONDUS_TYPE:
+      case OndusSenseBlue.ONDUS_TYPE:     // 104 Blue Home
+      case OndusSenseBlue.ONDUS_TYPE_PRO: // 105 Blue Professional
         this.log.info(`Opening device handler "${OndusSenseBlue.ONDUS_NAME}" for "${applianceInfo.name}"`);
         new OndusSenseBlue(this, locationID, roomID, accessory).start();
         break;
-      case OndusSenseRed.ONDUS_TYPE:
+      case OndusSenseRed.ONDUS_TYPE:      // 106 (UNCONFIRMED)
         this.log.info(`Opening device handler "${OndusSenseRed.ONDUS_NAME}" for "${applianceInfo.name}"`);
         new OndusSenseRed(this, locationID, roomID, accessory).start();
         break;
-      */
       default:
         this.log.warn(`Unsupported Ondus appliance type encountered: ${applianceInfo.type} - ignoring`);
         this.logUnsupportedAppliance(locationID, roomID, applianceInfo)

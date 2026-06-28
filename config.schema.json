@@ -20,6 +20,22 @@
         "required": false,
         "default": false
       },
+      "blue_control" : {
+        "title":"Dispense water from Grohe Blue/Red in HomeKit",
+        "description":"When enabled (the default), the Still/Medium/Sparkling buttons on a Grohe Blue (and the Hot Water button on an experimental Grohe Red) actually pour water through the Ondus API. Uncheck this to make the buttons inert if you are worried about accidental dispensing (e.g. a misheard Siri command with no glass under the tap).",
+        "type": "boolean",
+        "required": false,
+        "default": true
+      },
+      "blue_amount_ml" : {
+        "title":"Grohe Blue/Red dispense amount (ml)",
+        "description":"How much water (in millilitres) a single press of a dispense button pours. The appliance stops automatically once this amount has been dispensed.",
+        "type": "integer",
+        "required": false,
+        "default" : 250,
+        "minimum" : 50,
+        "maximum" : 2000
+      },
       "refresh_token": {
         "description":"Grohe Ondus API refresh token",
         "type" : "string",
@@ -107,7 +123,9 @@
           "flex-flow": "column",
           "items": [
             "name",
-            "valve_control"
+            "valve_control",
+            "blue_control",
+            "blue_amount_ml"
           ]
         }
       ]

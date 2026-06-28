@@ -1,41 +1,50 @@
-import { PlatformAccessory, Service } from 'homebridge';
+import { PlatformAccessory, Service, CharacteristicValue } from 'homebridge';
 
 import { OndusAppliance } from './ondusAppliance.js';
 import { OndusPlatform } from './ondusPlatform.js';
 
 
 /**
- * Grohe Sense Blue Accessory in the Ondus platform for carbonating drinking water 
- * 
- * This accessory exposes the following services:
- * - Switch
+ * Grohe Blue Accessory in the Ondus platform for filtered / carbonated drinking water.
  *
- * In addition the following metrics are logged, but not exposed in HomeKit:
- * - TBD
- * 
+ * Covers both Blue Home (type 104) and Blue Professional (type 105).
+ *
+ * This accessory exposes the following services:
+ * - Switch x3 (Still / Medium / Carbonated) - momentary "dispense" buttons
+ * - Battery          - remaining CO2 level (%)
+ * - FilterMaintenance - remaining water filter level (%)
+ *
+ * Dispensing works by POSTing a one-shot command containing a tap_type and a
+ * tap_amount (in ml). The appliance pours the requested amount and stops on its
+ * own; there is no separate "stop" command (a tap_type of 0 does NOT stop the
+ * flow), which is why the dispense buttons are modelled as momentary switches.
  */
 
 enum TapType {
-  STILL = 0,
-  MEDIUM = 1,
-  CARBONATED = 2,
+  STILL = 1,
+  MEDIUM = 2,
+  CARBONATED = 3,
 }
 
 export class OndusSenseBlue extends OndusAppliance {
-  static ONDUS_TYPE = 104;
-  static ONDUS_NAME = 'Sense Blue';
+  static ONDUS_TYPE = 104;     // Blue Home
+  static ONDUS_TYPE_PRO = 105; // Blue Professional
+  static ONDUS_NAME = 'Blue';
 
-  // Sense Blue services
-  switchService: Service;
+  // Default dispense amount (ml) if none is configured
+  static DEFAULT_AMOUNT_ML = 250;
+  // How long a dispense button stays "on" before it resets itself
+  static SWITCH_RESET_MS = 1500;
 
-  // Sense Blue properties
-  tapType: TapType;
-  flowRateStill: number;
-  flowRateMedium: number;
-  flowRateCarbonated: number;
+  // Blue services
+  private stillService: Service;
+  private mediumService: Service;
+  private carbonatedService: Service;
+  private co2Service: Service;
+  private filterService: Service;
 
   /**
-   * Ondus Sense Blue constructor for carbonated tap water
+   * Ondus Sense Blue constructor for filtered / carbonated tap water
    */
   constructor(
     public ondusPlatform: OndusPlatform,
@@ -46,49 +55,239 @@ export class OndusSenseBlue extends OndusAppliance {
     // Call parent constructor
     super(ondusPlatform, locationID, roomID, accessory);
 
-    // Set Blue properties to default values
-    this.tapType = 0;
-    this.flowRateStill = 0;
-    this.flowRateMedium = 0;
-    this.flowRateCarbonated = 0;
+    // The Blue is not a leak/temperature sensor, so drop the common services
+    // the base class added for the Sense/Guard appliances.
+    if (this.leakService) {
+      this.accessory.removeService(this.leakService);
+    }
+    if (this.temperatureService) {
+      this.accessory.removeService(this.temperatureService);
+    }
+
+    const deviceName = accessory.context.device.name;
 
     /**
-     * Switch Service
+     * Dispense Switch services (Still / Medium / Carbonated)
+     *
+     * Modelled as momentary switches: turning one on triggers a dispense and the
+     * switch automatically resets to off shortly after.
      */
+    this.stillService = this.getOrAddSwitch('tap-still', `${deviceName} Still`);
+    this.mediumService = this.getOrAddSwitch('tap-medium', `${deviceName} Medium`);
+    this.carbonatedService = this.getOrAddSwitch('tap-carbonated', `${deviceName} Sparkling`);
 
-    // get the Switch service if it exists, otherwise create a new Switch service
-    this.switchService = this.accessory.getService(this.ondusPlatform.Service.Switch) || 
-       this.accessory.addService(this.ondusPlatform.Service.Switch);
+    this.registerSwitchHandlers(this.stillService, TapType.STILL);
+    this.registerSwitchHandlers(this.mediumService, TapType.MEDIUM);
+    this.registerSwitchHandlers(this.carbonatedService, TapType.CARBONATED);
 
-    // set the Switch service characteristics
-    this.switchService
-      .setCharacteristic(this.ondusPlatform.Characteristic.Name, accessory.context.device.name)
-      .setCharacteristic(this.ondusPlatform.Characteristic.StatusActive, this.ondusPlatform.Characteristic.Active.ACTIVE)
-      .setCharacteristic(this.ondusPlatform.Characteristic.StatusFault, this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);
+    // Present the appliance primarily as a (still water) tap
+    this.stillService.setPrimaryService(true);
+    this.accessory.category = this.ondusPlatform.api.hap.Categories.FAUCET;
+
+    /**
+     * CO2 level - exposed as a Battery service so HomeKit shows a level (%) and
+     * a low-level warning when the CO2 cylinder is nearly empty.
+     */
+    this.co2Service = this.accessory.getService(this.ondusPlatform.Service.Battery) ||
+      this.accessory.addService(this.ondusPlatform.Service.Battery);
+    this.co2Service
+      .setCharacteristic(this.ondusPlatform.Characteristic.Name, `${deviceName} CO2`)
+      .setCharacteristic(this.ondusPlatform.Characteristic.ChargingState,
+        this.ondusPlatform.Characteristic.ChargingState.NOT_CHARGEABLE)
+      .setCharacteristic(this.ondusPlatform.Characteristic.StatusLowBattery,
+        this.ondusPlatform.Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL)
+      .setCharacteristic(this.ondusPlatform.Characteristic.BatteryLevel, 100);
+
+    /**
+     * Water filter level - exposed as a FilterMaintenance service
+     */
+    this.filterService = this.accessory.getService(this.ondusPlatform.Service.FilterMaintenance) ||
+      this.accessory.addService(this.ondusPlatform.Service.FilterMaintenance);
+    this.filterService
+      .setCharacteristic(this.ondusPlatform.Characteristic.Name, `${deviceName} Filter`)
+      .setCharacteristic(this.ondusPlatform.Characteristic.FilterChangeIndication,
+        this.ondusPlatform.Characteristic.FilterChangeIndication.FILTER_OK)
+      .setCharacteristic(this.ondusPlatform.Characteristic.FilterLifeLevel, 100);
   }
 
+  /**
+   * Kick off the initial measurement read and schedule periodic refreshes so the
+   * CO2 / filter levels stay current in HomeKit.
+   */
+  start(): void {
+    void this.getMeasurements().catch(() => { /* errors logged in getMeasurements */ });
+    setInterval(() => {
+      void this.getMeasurements().catch(() => { /* errors logged in getMeasurements */ });
+    }, this.getRefreshIntervalMs());
+  }
+
+  // ---- HELPER FUNCTIONS BELOW ----
+
+  private getOrAddSwitch(subType: string, name: string): Service {
+    const service = this.accessory.getServiceById(this.ondusPlatform.Service.Switch, subType) ||
+      this.accessory.addService(this.ondusPlatform.Service.Switch, name, subType);
+    service
+      .setCharacteristic(this.ondusPlatform.Characteristic.Name, name)
+      .setCharacteristic(this.ondusPlatform.Characteristic.On, false);
+    return service;
+  }
+
+  private registerSwitchHandlers(service: Service, tapType: TapType): void {
+    service.getCharacteristic(this.ondusPlatform.Characteristic.On)
+      // Momentary switch: always reports "off"
+      .onGet(() => false)
+      .onSet((value: CharacteristicValue) => this.handleDispenseSet(service, tapType, value));
+  }
+
+  /**
+   * Resolve the configured dispense amount (ml), clamped to a sane range.
+   */
+  private getDispenseAmountMl(): number {
+    const raw = this.ondusPlatform.config['blue_amount_ml'];
+    let ml = typeof raw === 'number' && Number.isFinite(raw) ? raw : Number(raw);
+    if (!Number.isFinite(ml) || ml <= 0) {
+      ml = OndusSenseBlue.DEFAULT_AMOUNT_ML;
+    }
+    return Math.min(2000, Math.max(50, Math.round(ml)));
+  }
 
   // ---- HTTP HANDLER FUNCTIONS BELOW ----
 
+  /**
+   * Handle a press on one of the dispense switches. Fires the dispense command
+   * (when blue_control is enabled) and resets the switch back to off shortly
+   * after so it behaves like a momentary button.
+   */
+  private handleDispenseSet(service: Service, tapType: TapType, value: CharacteristicValue): void {
+    // Ignore the implicit "off" we push ourselves when resetting the switch
+    if (value !== true) {
+      return;
+    }
 
+    // Reset the switch back to off so it behaves like a momentary button
+    setTimeout(() => {
+      service.updateCharacteristic(this.ondusPlatform.Characteristic.On, false);
+    }, OndusSenseBlue.SWITCH_RESET_MS);
+
+    // blue_control defaults to enabled; only an explicit false disables dispensing
+    if (this.ondusPlatform.config['blue_control'] === false) {
+      // eslint-disable-next-line max-len
+      this.ondusPlatform.log.warn(`[${this.logPrefix}] Ignoring dispense request - enable "blue_control" in the plugin settings to dispense water from HomeKit`);
+      return;
+    }
+
+    void this.dispense(tapType).catch(() => { /* errors logged in dispense */ });
+  }
 
   // ---- ONDUS API FUNCTIONS BELOW ----
 
   /**
-   * Fetch Ondus Sense Blue status from the Ondus API.
+   * Dispense water of the given tap type. The appliance pours tap_amount (ml)
+   * and then stops by itself.
    */
-  getParams() {
-    this.ondusPlatform.log.debug(`[${this.logPrefix}] Fetch params: NOT IMPLEMENTED`);
-    //this.getApplianceParams()
+  private async dispense(tapType: TapType): Promise<void> {
+    const tapAmount = this.getDispenseAmountMl();
+    const typeName = TapType[tapType];
+    this.ondusPlatform.log.info(`[${this.logPrefix}] Dispensing ${tapAmount}ml of ${typeName.toLowerCase()} water`);
+
+    // Body shape mirrors what the Grohe Ondus app sends (status / data_latest
+    // are intentionally omitted, as the app strips them before posting).
+    const data = {
+      'type': this.accessory.context.device.type,
+      'command': {
+        'co2_status_reset': false,
+        'tap_type': tapType,
+        'cleaning_mode': false,
+        'filter_status_reset': false,
+        'get_current_measurement': true,
+        'tap_amount': tapAmount,
+        'factory_reset': false,
+        'revoke_flush_confirmation': false,
+        'exec_auto_flush': false,
+      },
+    };
+
+    try {
+      await this.setApplianceCommand(data);
+      this.ondusPlatform.log.debug(`[${this.logPrefix}] Dispense command accepted`);
+    } catch (err) {
+      this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to dispense water: ${err}`);
+      throw err;
+    }
   }
 
-  getConfig() {
-    this.ondusPlatform.log.debug(`[${this.logPrefix}] Fetch config: NOT IMPLEMENTED`);
-    //this.getApplianceConfig()
+  /**
+   * Fetch the latest CO2 / filter consumable levels and push them to HomeKit.
+   *
+   * The consumable levels live in the appliance's data_latest.measurement block;
+   * the coarse low/empty flags live in the appliance state block.
+   */
+  async getMeasurements(): Promise<void> {
+    this.ondusPlatform.log.debug(`[${this.logPrefix}] Updating CO2 and filter levels`);
+
+    try {
+      const info = await this.getApplianceInfo();
+
+      // Dump server response for debugging purpose if SHTF mode is enabled
+      if (this.ondusPlatform.config['shtf_mode']) {
+        const debug = JSON.stringify(info.body);
+        this.ondusPlatform.log.debug(`[${this.logPrefix}] getMeasurements().getApplianceInfo() API RSP:\n"${debug}"`);
+      }
+
+      const appliance = Array.isArray(info.body) ? info.body[0] : info.body;
+      const measurement = appliance?.data_latest?.measurement;
+      const state = appliance?.state;
+
+      if (measurement) {
+        if (typeof measurement.remaining_co2 === 'number') {
+          this.setCo2Level(measurement.remaining_co2);
+        }
+        if (typeof measurement.remaining_filter === 'number') {
+          this.setFilterLife(measurement.remaining_filter);
+        }
+        this.ondusPlatform.log.info(
+          // eslint-disable-next-line max-len
+          `[${this.logPrefix}] => CO2: ${measurement.remaining_co2}% (${measurement.remaining_co2_liters}L), Filter: ${measurement.remaining_filter}% (${measurement.remaining_filter_liters}L)`);
+      } else {
+        this.ondusPlatform.log.debug(`[${this.logPrefix}] No data_latest.measurement in appliance info`);
+      }
+
+      if (state) {
+        this.setCo2Low(state.co2_empty === true || state.co2_20l_reached === true);
+        this.setFilterChange(state.filter_empty === true || state.filter_20l_reached === true);
+        if (state.cleaning_needed === true) {
+          this.ondusPlatform.log.warn(`[${this.logPrefix}] Cleaning is needed`);
+        }
+      }
+    } catch (err) {
+      this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to update CO2 and filter levels: ${err}`);
+      throw err;
+    }
   }
 
-  getState() {
-    this.ondusPlatform.log.debug(`[${this.logPrefix}] Fetch state: NOT IMPLEMENTED`);
-    //this.getApplianceState()
+  // ---- CHARACTERISTICS HANDLER FUNCTIONS BELOW ----
+
+  private setCo2Level(percent: number): void {
+    const level = Math.min(100, Math.max(0, Math.round(percent)));
+    this.co2Service.updateCharacteristic(this.ondusPlatform.Characteristic.BatteryLevel, level);
+  }
+
+  private setCo2Low(low: boolean): void {
+    this.co2Service.updateCharacteristic(this.ondusPlatform.Characteristic.StatusLowBattery,
+      low
+        ? this.ondusPlatform.Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW
+        : this.ondusPlatform.Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL);
+  }
+
+  private setFilterLife(percent: number): void {
+    const level = Math.min(100, Math.max(0, Math.round(percent)));
+    this.filterService.updateCharacteristic(this.ondusPlatform.Characteristic.FilterLifeLevel, level);
+  }
+
+  private setFilterChange(change: boolean): void {
+    this.filterService.updateCharacteristic(this.ondusPlatform.Characteristic.FilterChangeIndication,
+      change
+        ? this.ondusPlatform.Characteristic.FilterChangeIndication.CHANGE_FILTER
+        : this.ondusPlatform.Characteristic.FilterChangeIndication.FILTER_OK);
   }
 }
