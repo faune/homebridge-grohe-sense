@@ -64,6 +64,7 @@ export class OndusNotification {
             40  : `Frost warning! Current temperature is ${this.appliance.currentTemperature}˚C`,
             80  : 'Guard lost WiFi connection',
             91  : 'Guard is offline - no connection to GROHE cloud',
+            92  : 'Pressure test was not possible due to normal water usage during last two nights',
             320 : 'Unusual water consumption detected - water has been SHUT OFF',
             321 : 'Unusual water consumption detected - water still ON',
             330 : 'Micro leakage detected',

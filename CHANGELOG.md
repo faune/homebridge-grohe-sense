@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-06-28
+
+### Added
+
+- Recognize notification category 20 / type 92 ("Pressure test was not possible
+  due to normal water usage during last two nights") instead of logging it as an
+  unknown notification.
+
 ## [2.1.0] - 2026-06-28
 
 ### Added
