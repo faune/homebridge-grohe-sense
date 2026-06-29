@@ -43,6 +43,9 @@ export class OndusSenseBlue extends OndusAppliance {
   private co2Service: Service;
   private filterService: Service;
 
+  // Ensures the verbose startup diagnostic is only emitted once per process
+  private diagnosticsLogged = false;
+
   /**
    * Ondus Sense Blue constructor for filtered / carbonated tap water
    */
@@ -115,10 +118,43 @@ export class OndusSenseBlue extends OndusAppliance {
    * CO2 / filter levels stay current in HomeKit.
    */
   start(): void {
+    // Grohe Blue support is still being validated against real devices, so dump
+    // the raw API payloads once at startup. This lets owners attach a single log
+    // to a bug report without having to enable SHTF mode or restart repeatedly.
+    void this.logDiagnostics().catch(() => { /* errors logged in logDiagnostics */ });
+
     void this.getMeasurements().catch(() => { /* errors logged in getMeasurements */ });
     setInterval(() => {
       void this.getMeasurements().catch(() => { /* errors logged in getMeasurements */ });
     }, this.getRefreshIntervalMs());
+  }
+
+  /**
+   * Dump the raw appliance info and command payloads once, so we can confirm
+   * exactly where the Blue exposes its CO2 / filter levels and what its command
+   * structure looks like. Logged at info level (not gated behind shtf_mode) only
+   * because Blue support is new and unverified.
+   */
+  private async logDiagnostics(): Promise<void> {
+    if (this.diagnosticsLogged) {
+      return;
+    }
+    this.diagnosticsLogged = true;
+
+    this.ondusPlatform.log.info(`[${this.logPrefix}] ===== GROHE BLUE DIAGNOSTIC (please include when reporting Blue issues) =====`);
+    const dumps: [string, Promise<{ status: number; body: unknown }>][] = [
+      ['getApplianceInfo', this.getApplianceInfo()],
+      ['getApplianceCommand', this.getApplianceCommand()],
+    ];
+    for (const [label, request] of dumps) {
+      try {
+        const response = await request;
+        this.ondusPlatform.log.info(`[${this.logPrefix}] ${label} (HTTP ${response.status}):\n${JSON.stringify(response.body, null, 2)}`);
+      } catch (err) {
+        this.ondusPlatform.log.info(`[${this.logPrefix}] ${label}: failed to retrieve (${err})`);
+      }
+    }
+    this.ondusPlatform.log.info(`[${this.logPrefix}] ============================================================================`);
   }
 
   // ---- HELPER FUNCTIONS BELOW ----
@@ -207,9 +243,12 @@ export class OndusSenseBlue extends OndusAppliance {
       },
     };
 
+    this.ondusPlatform.log.debug(`[${this.logPrefix}] Dispense request: ${JSON.stringify(data)}`);
     try {
-      await this.setApplianceCommand(data);
-      this.ondusPlatform.log.debug(`[${this.logPrefix}] Dispense command accepted`);
+      const response = await this.setApplianceCommand(data);
+      // Log the API response so a silently-rejected dispense is visible without
+      // requiring shtf_mode (the appliance often echoes its command/state back).
+      this.ondusPlatform.log.info(`[${this.logPrefix}] Dispense response (HTTP ${response.status}): ${JSON.stringify(response.body)}`);
     } catch (err) {
       this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to dispense water: ${err}`);
       throw err;
@@ -249,7 +288,11 @@ export class OndusSenseBlue extends OndusAppliance {
           // eslint-disable-next-line max-len
           `[${this.logPrefix}] => CO2: ${measurement.remaining_co2}% (${measurement.remaining_co2_liters}L), Filter: ${measurement.remaining_filter}% (${measurement.remaining_filter_liters}L)`);
       } else {
-        this.ondusPlatform.log.debug(`[${this.logPrefix}] No data_latest.measurement in appliance info`);
+        // Escalate to a warning (with the keys we *did* get) so we can tell from
+        // a user's normal log whether the levels live somewhere else entirely.
+        const keys = appliance && typeof appliance === 'object' ? Object.keys(appliance).join(', ') : 'none';
+        // eslint-disable-next-line max-len
+        this.ondusPlatform.log.warn(`[${this.logPrefix}] No data_latest.measurement in appliance info - CO2/filter levels not updated. Available keys: [${keys}]. Please report this (see the GROHE BLUE DIAGNOSTIC dump at startup).`);
       }
 
       if (state) {

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.3] - 2026-06-29
+
+### Added
+
+- Grohe Blue diagnostics to speed up validation on real devices: a one-time
+  startup dump of the raw `getApplianceInfo` and `getApplianceCommand` payloads
+  (logged at info level, no SHTF mode needed), and logging of the dispense
+  request and the API response. The missing-measurement case is now a warning
+  that lists the available payload keys, so it is clear from a normal log
+  whether the CO2/filter levels are sourced from the right endpoint.
+
 ## [2.1.2] - 2026-06-29
 
 ### Fixed
