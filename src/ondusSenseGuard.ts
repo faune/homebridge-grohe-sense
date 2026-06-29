@@ -213,13 +213,8 @@ export class OndusSenseGuard extends OndusAppliance {
   // ---- HTTP HANDLER FUNCTIONS BELOW ----
 
   /**
-   * Handle requests to get the current value of the "Current Temperature" characteristic.
-   *
-   * Returns the last known temperature immediately instead of awaiting a network
-   * round-trip. Blocking here made HomeKit log "This plugin slows down
-   * Homebridge ... didn't respond at all" whenever the Ondus API was slow (e.g.
-   * right after a restart). A background refresh fetches fresh measurements and
-   * pushes them via updateCharacteristic when they arrive.
+   * Get the current temperature. Returns the cached value immediately and
+   * refreshes in the background so a slow Ondus API can't block the read.
    */
   handleCurrentTemperatureGet(): CharacteristicValue {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET CurrentTemperature (cached=${this.currentTemperature})`);
@@ -431,8 +426,7 @@ export class OndusSenseGuard extends OndusAppliance {
           this.currentPressure = lastMeasurement.pressure;
           this.currentTemperature = lastMeasurement.temperature_guard;
 
-          // Push the freshly fetched temperature so a background refresh (the
-          // getter now returns the cached value immediately) updates the tile
+          // Push fresh temperature so the background refresh updates the tile
           this.temperatureService.updateCharacteristic(
             this.ondusPlatform.Characteristic.CurrentTemperature, this.currentTemperature);
           const valveState = this.currentValveState === OndusSenseGuard.VALVE_OPEN? 'Open': 'Closed';

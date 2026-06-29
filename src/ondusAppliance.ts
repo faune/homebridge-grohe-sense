@@ -90,10 +90,7 @@ export abstract class OndusAppliance {
       .setCharacteristic(this.ondusPlatform.Characteristic.StatusActive, this.ondusPlatform.Characteristic.Active.ACTIVE)
       .setCharacteristic(this.ondusPlatform.Characteristic.StatusFault, this.ondusPlatform.Characteristic.StatusFault.NO_FAULT);      
   
-    // create handlers for required characteristics of Leak service.
-    // Use the cached, non-blocking getter so HomeKit reads return immediately;
-    // handleLeakDetectedGet() performs the actual network fetch and is driven by
-    // startLeakNotificationPolling() in the background.
+    // Use the cached, non-blocking getter; the poller does the network fetch
     this.leakService.getCharacteristic(this.ondusPlatform.Characteristic.LeakDetected)
       .onGet(this.handleLeakDetectedGetCached.bind(this));
 
@@ -270,13 +267,9 @@ export abstract class OndusAppliance {
    * a leak is detected.
    */
   /**
-   * Non-blocking getter bound to the LeakDetected characteristic.
-   *
-   * Returns the last known leak state immediately and kicks off a background
-   * refresh, instead of awaiting an Ondus API round-trip inside the read
-   * handler (which could exceed HomeKit's read timeout and log "This plugin
-   * slows down Homebridge ... didn't respond at all" when the API is slow).
-   * The fresh state is pushed via updateCharacteristic when it arrives.
+   * Non-blocking getter for LeakDetected: returns the cached state immediately
+   * and refreshes in the background, so a slow Ondus API can't block the read.
+   * handleLeakDetectedGet() does the actual fetch and is also run by the poller.
    */
   handleLeakDetectedGetCached(): CharacteristicValue {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Triggered GET LeakDetected (cached=${this.leakDetected})`);

@@ -148,9 +148,7 @@ export class OndusPlatform implements DynamicPlatformPlugin {
 
         for (const appliance of appliances.body) {
           this.log.debug(`Found applianceID=${appliance.appliance_id} name=${appliance.name}`);
-          // Isolate each appliance so a single failing handler (e.g. an
-          // unexpected payload during construction) cannot abort discovery of
-          // the remaining appliances or crash the child bridge.
+          // Isolate each appliance so one failing handler doesn't abort discovery
           try {
             this.registerOndusAppliance(location.id, room.id, appliance);
           } catch (err) {

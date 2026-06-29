@@ -130,17 +130,13 @@ export class OndusSenseBlue extends OndusAppliance {
   }
 
   /**
-   * Dump the raw appliance info once, so we can confirm exactly where the Blue
-   * exposes its CO2 / filter levels. Logged at info level (not gated behind
-   * shtf_mode) only because Blue support is new and unverified.
+   * Dump the raw appliance info once to confirm where the Blue exposes its
+   * CO2 / filter levels. Logged at info level because Blue support is new.
    *
-   * NOTE: We deliberately do NOT probe the .../command endpoint here. That
-   * endpoint is Sense Guard specific (it returns valve state) and the Ondus API
-   * answers it with 403 Forbidden for a Blue. Beyond being useless, the failed
-   * request leaks an unhandled rejection out of superagent-throttle (which
-   * rejects its own internal promise for the request, separate from the one we
-   * await), crashing the child bridge. getApplianceInfo() already contains the
-   * config / state / data_latest.measurement blocks we actually need.
+   * Do NOT probe the .../command endpoint here: it is Sense Guard specific and
+   * returns 403 Forbidden for a Blue, which leaks an unhandled rejection out of
+   * superagent-throttle and crashes the bridge. getApplianceInfo() already has
+   * the config / state / data_latest.measurement blocks we need.
    */
   private async logDiagnostics(): Promise<void> {
     if (this.diagnosticsLogged) {
