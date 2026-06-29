@@ -112,6 +112,9 @@ export class OndusPlatform implements DynamicPlatformPlugin {
         .then(dashboard => {
           const debug = JSON.stringify(dashboard.body, null, ' ');
           this.log.debug(`discoverDevices().getDashboard() API RSP:\n${debug}`);
+        })
+        .catch(err => {
+          this.log.debug(`discoverDevices().getDashboard() failed: ${err}`);
         });
     }
 
@@ -145,7 +148,14 @@ export class OndusPlatform implements DynamicPlatformPlugin {
 
         for (const appliance of appliances.body) {
           this.log.debug(`Found applianceID=${appliance.appliance_id} name=${appliance.name}`);
-          this.registerOndusAppliance(location.id, room.id, appliance);
+          // Isolate each appliance so a single failing handler (e.g. an
+          // unexpected payload during construction) cannot abort discovery of
+          // the remaining appliances or crash the child bridge.
+          try {
+            this.registerOndusAppliance(location.id, room.id, appliance);
+          } catch (err) {
+            this.log.error(`Failed to register appliance "${appliance.name}" (type ${appliance.type}): ${err}`);
+          }
         }
       }
     }

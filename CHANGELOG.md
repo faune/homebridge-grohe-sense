@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.5] - 2026-06-29
+
+### Fixed
+
+- Fixed a crash loop on Grohe Blue. The v2.1.3 startup diagnostics probed the
+  appliance `.../command` endpoint, which is Sense Guard specific (it returns
+  valve state) and the Ondus API answers with `403 Forbidden` for a Blue. A
+  genuine HTTP error from that request leaks an unhandled rejection out of the
+  `superagent-throttle` layer (it rejects its own internal promise for the
+  request, separate from the one we await), which crashed the child bridge even
+  though the awaited call was wrapped in `try/catch`. The Blue diagnostics now
+  only fetch `getApplianceInfo`, which already contains the `config`, `state`
+  and `data_latest.measurement` blocks needed to validate the appliance.
+
+### Changed
+
+- Hardened device discovery: each appliance is now registered inside its own
+  `try/catch`, so an unexpected failure constructing one appliance handler is
+  logged and skipped instead of aborting discovery of the remaining appliances.
+
 ## [2.1.4] - 2026-06-29
 
 ### Fixed

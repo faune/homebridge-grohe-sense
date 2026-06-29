@@ -130,10 +130,17 @@ export class OndusSenseBlue extends OndusAppliance {
   }
 
   /**
-   * Dump the raw appliance info and command payloads once, so we can confirm
-   * exactly where the Blue exposes its CO2 / filter levels and what its command
-   * structure looks like. Logged at info level (not gated behind shtf_mode) only
-   * because Blue support is new and unverified.
+   * Dump the raw appliance info once, so we can confirm exactly where the Blue
+   * exposes its CO2 / filter levels. Logged at info level (not gated behind
+   * shtf_mode) only because Blue support is new and unverified.
+   *
+   * NOTE: We deliberately do NOT probe the .../command endpoint here. That
+   * endpoint is Sense Guard specific (it returns valve state) and the Ondus API
+   * answers it with 403 Forbidden for a Blue. Beyond being useless, the failed
+   * request leaks an unhandled rejection out of superagent-throttle (which
+   * rejects its own internal promise for the request, separate from the one we
+   * await), crashing the child bridge. getApplianceInfo() already contains the
+   * config / state / data_latest.measurement blocks we actually need.
    */
   private async logDiagnostics(): Promise<void> {
     if (this.diagnosticsLogged) {
@@ -142,21 +149,12 @@ export class OndusSenseBlue extends OndusAppliance {
     this.diagnosticsLogged = true;
 
     this.ondusPlatform.log.info(`[${this.logPrefix}] ===== GROHE BLUE DIAGNOSTIC (please include when reporting Blue issues) =====`);
-    // Create each request lazily inside the loop. Creating them all up front and
-    // awaiting sequentially means a later promise can reject (e.g. the Blue's
-    // command endpoint returns 403) before it is awaited, which Node treats as an
-    // unhandled rejection and would crash the process.
-    const requests: [string, () => Promise<{ status: number; body: unknown }>][] = [
-      ['getApplianceInfo', () => this.getApplianceInfo()],
-      ['getApplianceCommand', () => this.getApplianceCommand()],
-    ];
-    for (const [label, request] of requests) {
-      try {
-        const response = await request();
-        this.ondusPlatform.log.info(`[${this.logPrefix}] ${label} (HTTP ${response.status}):\n${JSON.stringify(response.body, null, 2)}`);
-      } catch (err) {
-        this.ondusPlatform.log.info(`[${this.logPrefix}] ${label}: failed to retrieve (${err})`);
-      }
+    try {
+      const response = await this.getApplianceInfo();
+      // eslint-disable-next-line max-len
+      this.ondusPlatform.log.info(`[${this.logPrefix}] getApplianceInfo (HTTP ${response.status}):\n${JSON.stringify(response.body, null, 2)}`);
+    } catch (err) {
+      this.ondusPlatform.log.info(`[${this.logPrefix}] getApplianceInfo: failed to retrieve (${err})`);
     }
     this.ondusPlatform.log.info(`[${this.logPrefix}] ============================================================================`);
   }
