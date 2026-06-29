@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.2] - 2026-06-29
+
+### Fixed
+
+- Fixed a crash ("Cannot read properties of undefined (reading 'forEach')")
+  during appliance registration for Grohe Blue (and Red). These appliances do
+  not expose a `config.thresholds` array like the Sense/Guard, so threshold
+  parsing now safely skips appliances without configured thresholds instead of
+  throwing and aborting registration.
+
 ## [2.1.1] - 2026-06-28
 
 ### Added

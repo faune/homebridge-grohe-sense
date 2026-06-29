@@ -69,10 +69,19 @@ export class OndusThresholds {
     // Use the name of the accessory being processed as log prefix
     this.logPrefix = this.accessory.context.device.name;
 
+    // Not all appliances report configured thresholds. The Sense / Guard expose
+    // a config.thresholds array, but the Blue / Red do not - so guard against it
+    // being absent to avoid crashing during appliance registration.
+    const thresholds = this.accessory.context.device.config?.['thresholds'];
+    if (!Array.isArray(thresholds)) {
+      this.log.debug(`[${this.logPrefix}] No configured threshold limits`);
+      return;
+    }
+
     // Find threshold limits
     this.log.info(`[${this.logPrefix}] Configured threshold limits:`);
 
-    this.accessory.context.device.config['thresholds'].forEach(element => {
+    thresholds.forEach(element => {
       if ((element.quantity === 'temperature') || (element.quantity === 'temperature_guard')) {
         if (element.type === 'min') {
           this.lowTempLimit = element.value;
