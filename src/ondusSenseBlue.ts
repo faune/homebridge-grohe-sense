@@ -142,13 +142,17 @@ export class OndusSenseBlue extends OndusAppliance {
     this.diagnosticsLogged = true;
 
     this.ondusPlatform.log.info(`[${this.logPrefix}] ===== GROHE BLUE DIAGNOSTIC (please include when reporting Blue issues) =====`);
-    const dumps: [string, Promise<{ status: number; body: unknown }>][] = [
-      ['getApplianceInfo', this.getApplianceInfo()],
-      ['getApplianceCommand', this.getApplianceCommand()],
+    // Create each request lazily inside the loop. Creating them all up front and
+    // awaiting sequentially means a later promise can reject (e.g. the Blue's
+    // command endpoint returns 403) before it is awaited, which Node treats as an
+    // unhandled rejection and would crash the process.
+    const requests: [string, () => Promise<{ status: number; body: unknown }>][] = [
+      ['getApplianceInfo', () => this.getApplianceInfo()],
+      ['getApplianceCommand', () => this.getApplianceCommand()],
     ];
-    for (const [label, request] of dumps) {
+    for (const [label, request] of requests) {
       try {
-        const response = await request;
+        const response = await request();
         this.ondusPlatform.log.info(`[${this.logPrefix}] ${label} (HTTP ${response.status}):\n${JSON.stringify(response.body, null, 2)}`);
       } catch (err) {
         this.ondusPlatform.log.info(`[${this.logPrefix}] ${label}: failed to retrieve (${err})`);

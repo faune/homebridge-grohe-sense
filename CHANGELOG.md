@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.4] - 2026-06-29
+
+### Fixed
+
+- Fixed an unhandled promise rejection that could crash Homebridge when a Grohe
+  Blue API endpoint returned an error (e.g. the command endpoint responding with
+  403 Forbidden). The diagnostic and unsupported-appliance dumps created all
+  their API request promises up front and awaited them sequentially, so a later
+  promise could reject before it was awaited. Requests are now created lazily as
+  they are awaited so every rejection is handled.
+
 ## [2.1.3] - 2026-06-29
 
 ### Added

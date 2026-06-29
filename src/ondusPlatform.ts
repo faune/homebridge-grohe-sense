@@ -218,16 +218,19 @@ export class OndusPlatform implements DynamicPlatformPlugin {
     this.log.warn('https://github.com/faune/homebridge-grohe-sense/issues/new');
     this.log.warn(`appliance (from getAppliances):\n${JSON.stringify(applianceInfo, null, 2)}`);
 
-    const dumps: [string, Promise<{ body: unknown }>][] = [
-      ['getApplianceInfo', this.ondusSession.getApplianceInfo(locationID, roomID, applianceID)],
-      ['getApplianceStatus', this.ondusSession.getApplianceStatus(locationID, roomID, applianceID)],
-      ['getApplianceCommand', this.ondusSession.getApplianceCommand(locationID, roomID, applianceID)],
-      ['getApplianceNotifications', this.ondusSession.getApplianceNotifications(locationID, roomID, applianceID)],
+    // Create each request lazily inside the loop. Creating them all up front and
+    // awaiting sequentially means a later promise can reject before it is awaited,
+    // which Node treats as an unhandled rejection and would crash the process.
+    const requests: [string, () => Promise<{ body: unknown }>][] = [
+      ['getApplianceInfo', () => this.ondusSession.getApplianceInfo(locationID, roomID, applianceID)],
+      ['getApplianceStatus', () => this.ondusSession.getApplianceStatus(locationID, roomID, applianceID)],
+      ['getApplianceCommand', () => this.ondusSession.getApplianceCommand(locationID, roomID, applianceID)],
+      ['getApplianceNotifications', () => this.ondusSession.getApplianceNotifications(locationID, roomID, applianceID)],
     ];
 
-    for (const [label, request] of dumps) {
+    for (const [label, request] of requests) {
       try {
-        const response = await request;
+        const response = await request();
         this.log.warn(`${label}:\n${JSON.stringify(response.body, null, 2)}`);
       } catch (err) {
         this.log.warn(`${label}: failed to retrieve (${err})`);
