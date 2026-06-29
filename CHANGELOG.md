@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Sense Guard no longer triggers Homebridge's "This plugin slows down Homebridge
+  ... didn't respond at all" warning for Current Temperature. The temperature
+  read handler blocked on an Ondus API round-trip, which could exceed HomeKit's
+  read timeout when the API was slow (e.g. right after a restart). It now returns
+  the cached temperature immediately and refreshes in the background, pushing the
+  fresh value via `updateCharacteristic`.
+
 ## [2.1.5] - 2026-06-29
 
 ### Fixed
