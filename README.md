@@ -3,9 +3,9 @@
 <img src="https://github.com/homebridge/branding/blob/latest/logos/homebridge-wordmark-logo-horizontal.png?raw=true" width="400"> 
 </p>
 <p align="center">
-<img src="https://raw.githubusercontent.com/faune/homebridge-grohe-sense/master/icons/homebridge-grohe-sense.png" width="100" alt="Homebridge Grohe Ondus plugin icon">
 <img src="https://raw.githubusercontent.com/faune/homebridge-grohe-sense/master/img/guard.jpg" width="150" alt="Grohe Sense Guard icon">
 <img src="https://raw.githubusercontent.com/faune/homebridge-grohe-sense/master/img/sense.jpg" width="150" alt="Grohe Sense icon">
+<img src="https://raw.githubusercontent.com/faune/homebridge-grohe-sense/master/img/blue.jpg" width="150" alt="Grohe Blue icon">
 </p>
 
 
