@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The experimental Grohe Red now sends the same full dispense command object as
+  the (confirmed-working) Blue, and shares the single `blue_control` /
+  `blue_amount_ml` settings - removing an unused `red_amount_ml` fallback - so
+  the two stay in sync. (Red remains experimental/unverified; the type id is
+  still a best-effort guess.)
+
 - Reduced Grohe Blue/Red log noise now that the Blue is validated: the verbose
   startup diagnostic dump is gated behind `shtf_mode` (instead of always logging
   the dashboard appliance at info on every restart), and the per-dispense API

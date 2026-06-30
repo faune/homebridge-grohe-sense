@@ -144,7 +144,8 @@ export class OndusSenseRed extends OndusAppliance {
   // ---- HELPER FUNCTIONS BELOW ----
 
   private getDispenseAmountMl(): number {
-    const raw = this.ondusPlatform.config['red_amount_ml'] ?? this.ondusPlatform.config['blue_amount_ml'];
+    // Shares the single blue_amount_ml / blue_control settings with the Blue
+    const raw = this.ondusPlatform.config['blue_amount_ml'];
     let ml = typeof raw === 'number' && Number.isFinite(raw) ? raw : Number(raw);
     if (!Number.isFinite(ml) || ml <= 0) {
       ml = OndusSenseRed.DEFAULT_AMOUNT_ML;
@@ -183,12 +184,20 @@ export class OndusSenseRed extends OndusAppliance {
     const tapAmount = this.getDispenseAmountMl();
     this.ondusPlatform.log.info(`[${this.logPrefix}] Dispensing ${tapAmount}ml of hot water (experimental)`);
 
+    // Mirror the full command object the Blue uses (confirmed working in #16);
+    // the Ondus API echoes all of these fields back, so send the complete set.
     const data = {
       'type': this.accessory.context.device.type,
       'command': {
+        'co2_status_reset': false,
         'tap_type': tapType,
+        'cleaning_mode': false,
+        'filter_status_reset': false,
         'get_current_measurement': true,
         'tap_amount': tapAmount,
+        'factory_reset': false,
+        'revoke_flush_confirmation': false,
+        'exec_auto_flush': false,
       },
     };
 
