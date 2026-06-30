@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.2] - 2026-06-30
+
+### Fixed
+
+- Fixed a `TypeError: Cannot read properties of undefined (reading 'date')`
+  logged for a Sense / Sense Plus when the sensor returns no measurements (e.g.
+  it has been offline or its battery is dead). The empty result is now handled
+  gracefully with a clear warning, and the temperature/humidity services are
+  marked inactive until the sensor reports again.
+
 ## [2.3.1] - 2026-06-30
 
 ### Changed

@@ -1,7 +1,7 @@
 {
   "displayName": "Ondus",
   "name": "homebridge-grohe-sense",
-  "version": "2.3.1",
+  "version": "2.3.2",
   "description": "Homebridge plugin for the Grohe Ondus family: Sense and Sense Plus leak sensors, Sense Guard water control, and Blue/Red water dispensers.",
   "license": "Apache-2.0",
   "repository": {

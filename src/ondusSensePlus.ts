@@ -232,6 +232,15 @@ export class OndusSensePlus extends OndusAppliance {
         if (!Array.isArray(measurementArray)) {
           throw Error(`Unknown response: ${measurementArray}`);
         }
+
+        // An offline sensor (e.g. dead battery) returns an empty window
+        if (measurementArray.length === 0) {
+          this.ondusPlatform.log.warn(`[${this.logPrefix}] No measurements returned - the sensor may be ` +
+            'offline or its battery may be dead');
+          this.setTemperatureServiceStatusActive(false);
+          this.setHumidityServiceStatusActive(false);
+          return;
+        }
         
         // Sort and retrieve last measurement
         this.ondusPlatform.log.debug(`[${this.logPrefix}] Retrieved ${measurementArray.length} measurements - picking latest one`);
