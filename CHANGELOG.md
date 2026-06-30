@@ -9,11 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Reduced Grohe Blue log noise now that the appliance is validated: the verbose
+- Reduced Grohe Blue/Red log noise now that the Blue is validated: the verbose
   startup diagnostic dump is gated behind `shtf_mode` (instead of always logging
   the dashboard appliance at info on every restart), and the per-dispense API
   response is logged at debug rather than info. The `=> CO2/Filter` status line
-  is unchanged, matching the Sense/Guard status logging.
+  is unchanged, matching the Sense/Guard status logging. The experimental Red
+  handler now mirrors the Blue's logging (shtf-gated diagnostic dump, debug-level
+  dispense, and a `=> Filter` status line) to keep the two in sync.
 
 ## [2.2.0] - 2026-06-30
 

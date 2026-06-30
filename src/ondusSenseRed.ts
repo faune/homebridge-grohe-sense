@@ -46,6 +46,9 @@ export class OndusSenseRed extends OndusAppliance {
   private hotService: Service;
   private filterService: Service;
 
+  // Ensures the verbose startup diagnostic is only emitted once per process
+  private diagnosticsLogged = false;
+
   /**
    * Ondus Sense Red constructor for hot / boiling tap water
    */
@@ -104,10 +107,38 @@ export class OndusSenseRed extends OndusAppliance {
    * Schedule periodic refreshes so the filter level stays current in HomeKit.
    */
   start(): void {
+    // Dump the raw dashboard payload once at startup when shtf_mode is enabled,
+    // so Red issues can be diagnosed without code changes or extra restarts.
+    void this.logDiagnostics().catch(() => { /* errors logged in logDiagnostics */ });
+
     void this.getMeasurements().catch(() => { /* errors logged in getMeasurements */ });
     setInterval(() => {
       void this.getMeasurements().catch(() => { /* errors logged in getMeasurements */ });
     }, this.getRefreshIntervalMs());
+  }
+
+  /**
+   * Dump this appliance's dashboard object once, gated behind shtf_mode, to help
+   * diagnose Red issues (Red is experimental, so real logs are especially
+   * valuable). The dashboard is where the Blue/Red data_latest.measurement block
+   * lives - the per-appliance endpoint omits it.
+   */
+  private async logDiagnostics(): Promise<void> {
+    if (!this.ondusPlatform.config['shtf_mode'] || this.diagnosticsLogged) {
+      return;
+    }
+    this.diagnosticsLogged = true;
+
+    this.ondusPlatform.log.info(`[${this.logPrefix}] ===== GROHE RED DIAGNOSTIC (please include when reporting Red issues) =====`);
+    try {
+      const dashboard = await this.ondusPlatform.ondusSession.getDashboard();
+      const appliance = this.findApplianceInDashboard(dashboard.body) ?? '<appliance not found in dashboard>';
+      // eslint-disable-next-line max-len
+      this.ondusPlatform.log.info(`[${this.logPrefix}] dashboard appliance (HTTP ${dashboard.status}):\n${JSON.stringify(appliance, null, 2)}`);
+    } catch (err) {
+      this.ondusPlatform.log.info(`[${this.logPrefix}] dashboard: failed to retrieve (${err})`);
+    }
+    this.ondusPlatform.log.info(`[${this.logPrefix}] ============================================================================`);
   }
 
   // ---- HELPER FUNCTIONS BELOW ----
@@ -161,9 +192,10 @@ export class OndusSenseRed extends OndusAppliance {
       },
     };
 
+    this.ondusPlatform.log.debug(`[${this.logPrefix}] Dispense request: ${JSON.stringify(data)}`);
     try {
-      await this.setApplianceCommand(data);
-      this.ondusPlatform.log.debug(`[${this.logPrefix}] Dispense command accepted`);
+      const response = await this.setApplianceCommand(data);
+      this.ondusPlatform.log.debug(`[${this.logPrefix}] Dispense response (HTTP ${response.status}): ${JSON.stringify(response.body)}`);
     } catch (err) {
       this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to dispense hot water: ${err}`);
       throw err;
@@ -197,6 +229,8 @@ export class OndusSenseRed extends OndusAppliance {
 
       if (measurement && typeof measurement.remaining_filter === 'number') {
         this.setFilterLife(measurement.remaining_filter);
+        // eslint-disable-next-line max-len
+        this.ondusPlatform.log.info(`[${this.logPrefix}] => Filter: ${measurement.remaining_filter}% (${measurement.remaining_filter_liters}L)`);
       }
       if (state) {
         this.setFilterChange(state.filter_empty === true || state.filter_20l_reached === true);
