@@ -9,7 +9,7 @@
 </p>
 
 
-# Homebridge Grohe Sense plugin
+# Homebridge Grohe Sense and Watersystems plugin
 
 [![verified-by-homebridge](https://badgen.net/badge/homebridge/verified/purple)](https://github.com/homebridge/homebridge/wiki/Verified-Plugins)
 [![homebridge-v2-ready](https://badgen.net/badge/homebridge/v2%20ready/purple)](https://github.com/homebridge/homebridge/wiki/Updating-To-Homebridge-v2.0)
