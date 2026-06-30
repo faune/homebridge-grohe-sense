@@ -214,5 +214,3 @@ If you really want to know this, lets take a stroll down memory lane:
 16. Managed to piece together something bridging the example plugin framework with my superagent code from 10 worthy of showing the world
 17. Had lots of fun learning new shit
 18. Currently waiting for contributions or law suite from Grohe
-
-x
