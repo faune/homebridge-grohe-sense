@@ -3,9 +3,9 @@
 <img src="https://github.com/homebridge/branding/blob/latest/logos/homebridge-wordmark-logo-horizontal.png?raw=true" width="400"> 
 </p>
 <p align="center">
-<img src="https://cdn.cloud.grohe.com/Web/4_3/ZZH_T22500C05_000_01_4_3/4_3/710/ZZH_T22500C05_000_01_4_3_4_3.jpg" width="150">
 <img src="https://raw.githubusercontent.com/faune/homebridge-grohe-sense/master/icons/homebridge-grohe-sense.png" width="100" alt="Homebridge Grohe Ondus plugin icon">
-<img src="https://cdn.cloud.grohe.com/Web/4_3/ZZH_T22505D55_000_01_4_3/4_3/710/ZZH_T22505D55_000_01_4_3_4_3.jpg" width="150">
+<img src="https://raw.githubusercontent.com/faune/homebridge-grohe-sense/master/img/guard.jpg" width="150" alt="Grohe Sense Guard icon">
+<img src="https://raw.githubusercontent.com/faune/homebridge-grohe-sense/master/img/sense.jpg" width="150" alt="Grohe Sense icon">
 </p>
 
 
@@ -18,17 +18,22 @@
 [![Downloads](https://img.shields.io/npm/dt/homebridge-grohe-sense.svg)](https://www.npmjs.com/package/homebridge-grohe-sense)
 
 
-Homebridge plugin for controlling some of the aspects of [Grohe Sense water security system](https://www.grohe.co.uk/en_gb/smarthome/grohe-sense-water-security-system/) using HomeKit.
+Homebridge plugin for controlling some of the aspects of [Grohe Sense water security system](https://www.grohe.co.uk/en_gb/smarthome/grohe-sense-water-security-system/)
+and [Grohe Blue/Red water dispensing systems](https://www.grohe.com/en-gb/inspiration/explore-collections/grohe-blue-home) using HomeKit.
 
 The following Grohe Sense components are supported:
 
   * Sense Guard main water inlet valve
   * Sense battery powered water leakage detector
   * Sense Plus mains powered water leakage detector
+  * Blue Home/Professional filtered/carbonated water dispensing systems
+  * Red hot water dispensing system (experimental, untested)
 
-## Screenshot
+## Screenshots
 
-![Grohe Sense Guard sensor layout](https://raw.githubusercontent.com/faune/homebridge-grohe-sense/master/img/sensors.png "Grohe Sense Guard sensor layout")
+![Grohe Sense Guard sensor layout](https://raw.githubusercontent.com/faune/homebridge-grohe-sense/master/img/sensors_sense.png "Grohe Sense Guard sensor layout")
+
+![Grohe Blue sensor layout](https://raw.githubusercontent.com/faune/homebridge-grohe-sense/master/img/sensors_blue.png "Grohe Blue sensor layout")
 
 
 ## Download
@@ -41,7 +46,7 @@ You can also search for this plugin from the awesome Homebridge web UI and it wi
 
 ## What is supported
 
-Plugin will automatically find and configure your Sense devices, and expose the following HomeKit services:
+Plugin will automatically find and configure your Ondus devices, and expose the following HomeKit services:
 
  * Sense Guard
    - Valve
@@ -58,6 +63,15 @@ Plugin will automatically find and configure your Sense devices, and expose the 
    - Leakage Sensor
    - Temperature Sensor
    - Humidity Sensor
+ * Blue Home/Professional (confirmed working via community testing, see issue #16)
+   - Still / Medium / Sparkling dispense buttons
+   - Configurable dispense amount (default: 250ml)
+   - CO2 level exposed as Battery Service
+   - Filter Service
+ * Red (experimental, untested - no real Red logs available yet)
+   - Hot Water dispense button
+   - Configurable dispense amount (default: 250ml)
+   - Filter Service
    
 
 ## What is not supported
@@ -88,6 +102,8 @@ There is a Settings screen during plugin setup that helps you configure the conf
   "password": "<secret>",
   "refresh_interval": 3600,
   "valve_control": true,
+  "blue_control": true,
+  "blue_amount_ml": 250,
   "throttle_support": false,
   "throttle_rate": 6,
   "throttle_rateper": 1000,
@@ -109,6 +125,12 @@ How often to query Ondus API for new data. Default setting of `3600` seconds is 
 ### `valve_control`
 If you have kids like me with iCloud family sharing enabled, and dont want them brats (just kidding, mine are actually angels) to turn off the main water supply through HomeKit as a prank when you are showering - this is for you! Set `valve_control` to `false`, and the plugin will ignore all valve control requests :-)
 
+### `blue_control`
+Gates the Blue/Red dispense buttons (default on). Uncheck to make them inert. Covers both Blue and Red.
+
+### `blue_amount_ml`
+Water per button press in ml (default `250`).
+
 ### `fakegato_support`
 Export historical sensor data for temperature and humidity to HomeKit using the proprietary Elgato Eve protocol. This feature will only be available from the Eve app, and will not display anything in the default Home app.
 
@@ -116,7 +138,7 @@ Export historical sensor data for temperature and humidity to HomeKit using the 
 Depending on the number of Ondus devices you have, the Ondus API might restrict the number of requests accepted within a server configured time. If you see ` Error: Too Many Requests` in the log, its time to start throttling!
 
 ### `shtf_mode`
-The Shit Hit The Fan mode is for debugging. If something is not working as expected, please enable this mode and run homebridge in debug mode. This will include more noisy logging which hopefully can help locate the problem. The debug log must be included when you are reporting an issue.
+The Shit Hit The Fan mode is for debugging. If something is not working as expected, please enable this mode and run homebridge in debug mode. This will include more noisy logging which hopefully can help locate the problem. The debug log must be included when you are reporting an issue. For a Grohe Blue/Red it also emits a one-time `GROHE BLUE/RED DIAGNOSTIC` dashboard dump at startup, which is the most useful thing to attach to a Blue/Red bug report.
 
 ## Obtaining a `refresh_token`
 
@@ -193,3 +215,4 @@ If you really want to know this, lets take a stroll down memory lane:
 17. Had lots of fun learning new shit
 18. Currently waiting for contributions or law suite from Grohe
 
+x
