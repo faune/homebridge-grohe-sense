@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.1] - 2026-06-30
+
+### Changed
+
+- Branding/metadata only (no functional changes): expanded the npm `keywords`
+  (grohe, ondus, sense, blue, red, water, leak, etc.) and updated the Homebridge
+  UI config `headerDisplay` so the plugin reflects the full Sense / Sense Plus /
+  Sense Guard / Blue / Red family instead of just Sense. Fixed a stale config
+  schema wiki link that still pointed at the old `homebridge-plugin-ondus` repo.
+
 ## [2.3.0] - 2026-06-30
 
 ### Changed

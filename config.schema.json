@@ -2,8 +2,8 @@
   "pluginAlias": "Ondus",
   "pluginType": "platform",
   "singular": true,
-  "headerDisplay": "Ondus plugin for Grohe Sense Guard water control and Sense leakage detectors",
-  "footerDisplay": "For a detailed description, see the [wiki](https://github.com/faune/homebridge-plugin-ondus/wiki/Configuration) • Report an [issue](https://github.com/faune/homebridge-grohe-sense/issues/new)",
+  "headerDisplay": "Ondus plugin for the Grohe Sense water security system (Sense / Sense Plus leak sensors, Sense Guard water control) and Grohe Blue/Red water dispensers",
+  "footerDisplay": "For a detailed description, see the [wiki](https://github.com/faune/homebridge-grohe-sense/wiki/Configuration) • Report an [issue](https://github.com/faune/homebridge-grohe-sense/issues/new)",
   "schema": {
     "type": "object",
     "properties": {
