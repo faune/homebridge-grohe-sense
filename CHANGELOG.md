@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-06-30
+
 ### Changed
 
 - The experimental Grohe Red now sends the same full dispense command object as
@@ -22,6 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is unchanged, matching the Sense/Guard status logging. The experimental Red
   handler now mirrors the Blue's logging (shtf-gated diagnostic dump, debug-level
   dispense, and a `=> Filter` status line) to keep the two in sync.
+
+### Documentation
+
+- README now documents Grohe Blue (confirmed working) and the experimental Red,
+  including the `blue_control` / `blue_amount_ml` settings, and refreshes the
+  device image assets. Added RELEASEFLOW.md describing the dev/test/release
+  process (publishing via npm Trusted Publishing / OIDC).
 
 ## [2.2.0] - 2026-06-30
 

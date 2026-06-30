@@ -11,7 +11,7 @@ How to develop, test, and publish new versions of `homebridge-grohe-sense`.
 
 ## One-time setup
 
-- **npm auth (for CI publishing):** create an **Automation** access token at npmjs.com → Access Tokens, then add it to the GitHub repo as a secret named `NPM_TOKEN` (Settings → Secrets and variables → Actions).
+- **npm auth (for CI publishing):** uses npm **Trusted Publishing (OIDC)** - no `NPM_TOKEN` secret. Configure the trusted publisher once on npmjs.com (package → Settings → Trusted Publishing) pointing at this repo's `.github/workflows/publish.yml` workflow on a GitHub-hosted runner. The workflow has `id-token: write` and upgrades to the latest npm (trusted publishing needs npm >= 11.5.1).
 - **npm auth (for manual publishing):** `npm login`.
 - **SSH for git push:** the `origin` remote uses SSH (`git@github.com:faune/homebridge-grohe-sense.git`); your key must be registered on GitHub.
 
