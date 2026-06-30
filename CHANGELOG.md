@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Grohe Blue CO2 and filter levels now read correctly. The consumable levels
+  live in `data_latest.measurement`, which the Ondus API only returns from the
+  dashboard endpoint - the per-appliance info endpoint omits it for the Blue, so
+  the levels previously stayed at their default 100%. CO2/filter (and the
+  low/empty + cleaning flags) are now sourced from the dashboard, and the
+  startup diagnostic dumps the dashboard appliance object. The same fix is
+  applied to the experimental Red scaffold.
+
 - Read handlers no longer block on Ondus API round-trips, which could exceed
   HomeKit's read timeout when the API was slow (e.g. right after a restart) and
   log "This plugin slows down Homebridge ... didn't respond at all". Affected

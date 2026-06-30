@@ -130,13 +130,10 @@ export class OndusSenseBlue extends OndusAppliance {
   }
 
   /**
-   * Dump the raw appliance info once to confirm where the Blue exposes its
-   * CO2 / filter levels. Logged at info level because Blue support is new.
-   *
-   * Do NOT probe the .../command endpoint here: it is Sense Guard specific and
-   * returns 403 Forbidden for a Blue, which leaks an unhandled rejection out of
-   * superagent-throttle and crashes the bridge. getApplianceInfo() already has
-   * the config / state / data_latest.measurement blocks we need.
+   * Dump this appliance's dashboard object once to confirm where the Blue
+   * exposes its CO2 / filter levels. Logged at info level because Blue support
+   * is new. The dashboard is used because (unlike the Sense/Guard) the Blue's
+   * data_latest.measurement block is omitted from the per-appliance endpoint.
    */
   private async logDiagnostics(): Promise<void> {
     if (this.diagnosticsLogged) {
@@ -146,11 +143,12 @@ export class OndusSenseBlue extends OndusAppliance {
 
     this.ondusPlatform.log.info(`[${this.logPrefix}] ===== GROHE BLUE DIAGNOSTIC (please include when reporting Blue issues) =====`);
     try {
-      const response = await this.getApplianceInfo();
+      const dashboard = await this.ondusPlatform.ondusSession.getDashboard();
+      const appliance = this.findApplianceInDashboard(dashboard.body) ?? '<appliance not found in dashboard>';
       // eslint-disable-next-line max-len
-      this.ondusPlatform.log.info(`[${this.logPrefix}] getApplianceInfo (HTTP ${response.status}):\n${JSON.stringify(response.body, null, 2)}`);
+      this.ondusPlatform.log.info(`[${this.logPrefix}] dashboard appliance (HTTP ${dashboard.status}):\n${JSON.stringify(appliance, null, 2)}`);
     } catch (err) {
-      this.ondusPlatform.log.info(`[${this.logPrefix}] getApplianceInfo: failed to retrieve (${err})`);
+      this.ondusPlatform.log.info(`[${this.logPrefix}] dashboard: failed to retrieve (${err})`);
     }
     this.ondusPlatform.log.info(`[${this.logPrefix}] ============================================================================`);
   }
@@ -256,24 +254,31 @@ export class OndusSenseBlue extends OndusAppliance {
   /**
    * Fetch the latest CO2 / filter consumable levels and push them to HomeKit.
    *
-   * The consumable levels live in the appliance's data_latest.measurement block;
-   * the coarse low/empty flags live in the appliance state block.
+   * Unlike the Sense/Guard, the Blue's data_latest.measurement block is only
+   * returned by the dashboard endpoint - the per-appliance info endpoint omits
+   * it. The coarse low/empty flags live in the appliance state block (also part
+   * of the dashboard appliance object).
    */
   async getMeasurements(): Promise<void> {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Updating CO2 and filter levels`);
 
     try {
-      const info = await this.getApplianceInfo();
+      const dashboard = await this.ondusPlatform.ondusSession.getDashboard();
 
       // Dump server response for debugging purpose if SHTF mode is enabled
       if (this.ondusPlatform.config['shtf_mode']) {
-        const debug = JSON.stringify(info.body);
-        this.ondusPlatform.log.debug(`[${this.logPrefix}] getMeasurements().getApplianceInfo() API RSP:\n"${debug}"`);
+        const debug = JSON.stringify(dashboard.body);
+        this.ondusPlatform.log.debug(`[${this.logPrefix}] getMeasurements().getDashboard() API RSP:\n"${debug}"`);
       }
 
-      const appliance = Array.isArray(info.body) ? info.body[0] : info.body;
-      const measurement = appliance?.data_latest?.measurement;
-      const state = appliance?.state;
+      const appliance = this.findApplianceInDashboard(dashboard.body);
+      if (!appliance) {
+        this.ondusPlatform.log.warn(`[${this.logPrefix}] Appliance not found in dashboard - CO2/filter levels not updated`);
+        return;
+      }
+
+      const measurement = appliance.data_latest?.measurement;
+      const state = appliance.state;
 
       if (measurement) {
         if (typeof measurement.remaining_co2 === 'number') {
@@ -290,7 +295,7 @@ export class OndusSenseBlue extends OndusAppliance {
         // a user's normal log whether the levels live somewhere else entirely.
         const keys = appliance && typeof appliance === 'object' ? Object.keys(appliance).join(', ') : 'none';
         // eslint-disable-next-line max-len
-        this.ondusPlatform.log.warn(`[${this.logPrefix}] No data_latest.measurement in appliance info - CO2/filter levels not updated. Available keys: [${keys}]. Please report this (see the GROHE BLUE DIAGNOSTIC dump at startup).`);
+        this.ondusPlatform.log.warn(`[${this.logPrefix}] No data_latest.measurement in dashboard appliance - CO2/filter levels not updated. Available keys: [${keys}]. Please report this (see the GROHE BLUE DIAGNOSTIC dump at startup).`);
       }
 
       if (state) {
@@ -304,6 +309,32 @@ export class OndusSenseBlue extends OndusAppliance {
       this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to update CO2 and filter levels: ${err}`);
       throw err;
     }
+  }
+
+  /**
+   * Locate this appliance within a dashboard response by walking
+   * locations -> rooms -> appliances and matching on appliance_id.
+   */
+  private findApplianceInDashboard(body: any): any | undefined {
+    const locations = body?.locations;
+    if (!Array.isArray(locations)) {
+      return undefined;
+    }
+    for (const location of locations) {
+      if (!Array.isArray(location?.rooms)) {
+        continue;
+      }
+      for (const room of location.rooms) {
+        if (!Array.isArray(room?.appliances)) {
+          continue;
+        }
+        const match = room.appliances.find(a => a?.appliance_id === this.getApplianceID());
+        if (match) {
+          return match;
+        }
+      }
+    }
+    return undefined;
   }
 
   // ---- CHARACTERISTICS HANDLER FUNCTIONS BELOW ----

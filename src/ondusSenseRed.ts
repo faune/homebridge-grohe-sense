@@ -172,22 +172,28 @@ export class OndusSenseRed extends OndusAppliance {
 
   /**
    * Fetch the latest filter level and push it to HomeKit. UNCONFIRMED data
-   * shape - modelled on the Grohe Blue (data_latest.measurement + state).
+   * shape - modelled on the Grohe Blue, whose data_latest.measurement block is
+   * only returned by the dashboard endpoint (not the per-appliance endpoint).
    */
   async getMeasurements(): Promise<void> {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Updating filter level (experimental)`);
 
     try {
-      const info = await this.getApplianceInfo();
+      const dashboard = await this.ondusPlatform.ondusSession.getDashboard();
 
       if (this.ondusPlatform.config['shtf_mode']) {
-        const debug = JSON.stringify(info.body);
-        this.ondusPlatform.log.debug(`[${this.logPrefix}] getMeasurements().getApplianceInfo() API RSP:\n"${debug}"`);
+        const debug = JSON.stringify(dashboard.body);
+        this.ondusPlatform.log.debug(`[${this.logPrefix}] getMeasurements().getDashboard() API RSP:\n"${debug}"`);
       }
 
-      const appliance = Array.isArray(info.body) ? info.body[0] : info.body;
-      const measurement = appliance?.data_latest?.measurement;
-      const state = appliance?.state;
+      const appliance = this.findApplianceInDashboard(dashboard.body);
+      if (!appliance) {
+        this.ondusPlatform.log.warn(`[${this.logPrefix}] Appliance not found in dashboard - filter level not updated`);
+        return;
+      }
+
+      const measurement = appliance.data_latest?.measurement;
+      const state = appliance.state;
 
       if (measurement && typeof measurement.remaining_filter === 'number') {
         this.setFilterLife(measurement.remaining_filter);
@@ -199,6 +205,32 @@ export class OndusSenseRed extends OndusAppliance {
       this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to update filter level: ${err}`);
       throw err;
     }
+  }
+
+  /**
+   * Locate this appliance within a dashboard response by walking
+   * locations -> rooms -> appliances and matching on appliance_id.
+   */
+  private findApplianceInDashboard(body: any): any | undefined {
+    const locations = body?.locations;
+    if (!Array.isArray(locations)) {
+      return undefined;
+    }
+    for (const location of locations) {
+      if (!Array.isArray(location?.rooms)) {
+        continue;
+      }
+      for (const room of location.rooms) {
+        if (!Array.isArray(room?.appliances)) {
+          continue;
+        }
+        const match = room.appliances.find(a => a?.appliance_id === this.getApplianceID());
+        if (match) {
+          return match;
+        }
+      }
+    }
+    return undefined;
   }
 
   // ---- CHARACTERISTICS HANDLER FUNCTIONS BELOW ----
