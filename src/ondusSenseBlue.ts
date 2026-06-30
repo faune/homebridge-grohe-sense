@@ -118,9 +118,8 @@ export class OndusSenseBlue extends OndusAppliance {
    * CO2 / filter levels stay current in HomeKit.
    */
   start(): void {
-    // Grohe Blue support is still being validated against real devices, so dump
-    // the raw API payloads once at startup. This lets owners attach a single log
-    // to a bug report without having to enable SHTF mode or restart repeatedly.
+    // Dump the raw dashboard payload once at startup when shtf_mode is enabled,
+    // so Blue issues can be diagnosed without code changes or extra restarts.
     void this.logDiagnostics().catch(() => { /* errors logged in logDiagnostics */ });
 
     void this.getMeasurements().catch(() => { /* errors logged in getMeasurements */ });
@@ -130,13 +129,12 @@ export class OndusSenseBlue extends OndusAppliance {
   }
 
   /**
-   * Dump this appliance's dashboard object once to confirm where the Blue
-   * exposes its CO2 / filter levels. Logged at info level because Blue support
-   * is new. The dashboard is used because (unlike the Sense/Guard) the Blue's
-   * data_latest.measurement block is omitted from the per-appliance endpoint.
+   * Dump this appliance's dashboard object once, gated behind shtf_mode, to help
+   * diagnose Blue issues (the dashboard is where the Blue's data_latest.measurement
+   * block lives - the per-appliance endpoint omits it).
    */
   private async logDiagnostics(): Promise<void> {
-    if (this.diagnosticsLogged) {
+    if (!this.ondusPlatform.config['shtf_mode'] || this.diagnosticsLogged) {
       return;
     }
     this.diagnosticsLogged = true;
@@ -242,9 +240,7 @@ export class OndusSenseBlue extends OndusAppliance {
     this.ondusPlatform.log.debug(`[${this.logPrefix}] Dispense request: ${JSON.stringify(data)}`);
     try {
       const response = await this.setApplianceCommand(data);
-      // Log the API response so a silently-rejected dispense is visible without
-      // requiring shtf_mode (the appliance often echoes its command/state back).
-      this.ondusPlatform.log.info(`[${this.logPrefix}] Dispense response (HTTP ${response.status}): ${JSON.stringify(response.body)}`);
+      this.ondusPlatform.log.debug(`[${this.logPrefix}] Dispense response (HTTP ${response.status}): ${JSON.stringify(response.body)}`);
     } catch (err) {
       this.ondusPlatform.log.error(`[${this.logPrefix}] Unable to dispense water: ${err}`);
       throw err;
